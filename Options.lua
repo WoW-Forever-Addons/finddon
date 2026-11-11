@@ -16,6 +16,8 @@ local PAGES = {
       onClick = function() ns.ToggleWindow() end, state = function() local p = _G.FinddonPanel return p ~= nil and p:IsShown() and true or false end },
     { key = "clearOnArrival", name = "Drop arrow and pin on arrival", tip = "A few seconds after you reach the NPC the arrow and the pin go away by themselves." },
     { key = "closeOnPick", name = "Close the window after a click", tip = "Clicking a hit sets the arrow and closes the search window." },
+    { key = "pictures", name = "NPC pictures", tip = "Shows the NPC's 3D model in each row and large under the roles. New WoW Forever NPCs may have none.",
+      onChange = function() if ns.ApplyPictures then ns.ApplyPictures() end end },
     { key = "otherSide", name = "Show the other faction", tip = "Also lists NPCs that only serve the other faction.", onChange = Rerun },
     ns.MinimapOption(),
     { kind = "button", name = "Drop arrow and pin", button = "Drop", tip = "Takes Finddon's target off the arrow and the maps. /fd clear",

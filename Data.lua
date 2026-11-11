@@ -3,13 +3,19 @@ local L = ns.L
 
 ---------------------------------------------------------------------------
 -- The NPC table. Data\NPCs.lua (tools/open/build_npcs.py) is one long string, a line per NPC:
---   id^name^title^side^roles^level^map:xxyy...[,map:xxyy...]
+--   id^name^title^side^roles^level^map:xxyy...[,map:xxyy...]^display   (display: the model for the NPC's picture, may be empty)
 -- It is read on the first search (ns.NPCs()), not at login, and the string is dropped after that.
 -- Role codes: v vendor, r repair, g reagents, f food and drink, a ammunition, s stable master, t flight master,
--- i innkeeper, b banker, h auctioneer, m riding trainer, e pet trainer, w weapon master, x rare,
+-- k cooking fire, l mailbox, n anvil, j forge (places: one line per zone and kind with all its spots), i innkeeper, b banker, h auctioneer, m riding trainer, e pet trainer, w weapon master, x rare,
 -- C<class ID in base 36> class trainer, P<letter> profession trainer.
 ---------------------------------------------------------------------------
 local ICON = "Interface\\Icons\\"
+-- (11.11.2026, Daniel: "Könnte man an den Zeichen was ändern?", chosen: the game's own symbols) the symbols of the
+-- minimap search for the services, every player knows them; /fd icons shows all of them in a row
+local TRACK = "Interface\\Minimap\\Tracking\\"
+-- places: the name in the data -> the text key (the kind of a cooking fire, Daniel 11.11.2026: "Art des Feuers")
+local PLACE_NAMES = { ["Cooking Fire"] = "Cooking fire", Campfire = "Campfire", Fireplace = "Fireplace", Brazier = "Brazier",
+  Stove = "Stove", Cauldron = "Cauldron", Mailbox = "Mailbox", Anvil = "Anvil", Forge = "Forge" }
 local CLASSES = { -- class ID -> token (the trainers in the data), in the order of the list
   { 1, "WARRIOR", "ClassIcon_Warrior" }, { 2, "PALADIN", "ClassIcon_Paladin" }, { 3, "HUNTER", "ClassIcon_Hunter" },
   { 4, "ROGUE", "ClassIcon_Rogue" }, { 5, "PRIEST", "ClassIcon_Priest" }, { 7, "SHAMAN", "ClassIcon_Shaman" },
@@ -23,6 +29,7 @@ local PROFS = {
   { "m", "Mining", "Trade_Mining" }, { "s", "Skinning", "INV_Misc_Pelt_Wolf_01" }, { "t", "Tailoring", "Trade_Tailoring" },
 }
 local B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
+ns.OBJECT_BASE = 9000000
 
 local function ClassName(token)
   local t = LOCALIZED_CLASS_NAMES_MALE
@@ -36,7 +43,7 @@ local roles, byCode
 local function BuildRoles()
   roles, byCode = {}, {}
   local function Add(code, label, group, icon, words)
-    local r = { code = code, label = label, group = group, icon = ICON .. icon, words = words }
+    local r = { code = code, label = label, group = group, icon = icon:find("\\", 1, true) and icon or ICON .. icon, words = words }
     roles[#roles + 1] = r
     byCode[code] = r
   end
@@ -48,21 +55,28 @@ local function BuildRoles()
   for _, c in ipairs(order) do
     Add("C" .. B36:sub(c[1] + 1, c[1] + 1), L["%s trainer"]:format(ClassName(c[2])), "Trainers", c[3],
       { c[2]:lower() .. " trainer", c[2]:lower() })
+    if c[2] == mine then roles[#roles].class = c[2] end -- the own class: its colour in the list
   end
   Add("w", L["Weapon master"], "Trainers", "INV_Sword_27", { "weapon master", "weapons" })
   Add("m", L["Riding trainer"], "Trainers", "Ability_Mount_RidingHorse", { "riding trainer", "riding", "mount" })
   Add("e", L["Pet trainer"], "Trainers", "Ability_Hunter_BeastTaming", { "pet trainer" })
   for _, p in ipairs(PROFS) do Add("P" .. p[1], L[p[2]], "Profession trainers", p[3], { p[2]:lower(), p[2]:lower() .. " trainer" }) end
   Add("v", L["All vendors"], "Vendors", "INV_Misc_Bag_10", { "vendor", "vendors", "merchant" })
-  Add("r", L["Repair"], "Vendors", "Trade_BlackSmithing", { "repair", "repairs" })
-  Add("g", L["Reagents"], "Vendors", "INV_Misc_Rune_06", { "reagents", "reagent" })
-  Add("f", L["Food and drink"], "Vendors", "INV_Misc_Food_15", { "food", "drink", "water", "food and drink" })
-  Add("a", L["Ammunition"], "Vendors", "INV_Ammo_Arrow_02", { "ammunition", "ammo", "arrows", "bullets" })
-  Add("i", L["Innkeeper"], "Services", "INV_Misc_Rune_01", { "innkeeper", "inn" })
-  Add("b", L["Bank"], "Services", "INV_Misc_Coin_02", { "bank", "banker" })
-  Add("h", L["Auction house"], "Services", "INV_Misc_Coin_01", { "auction house", "auction", "auctioneer", "ah" })
-  Add("t", L["Flight master"], "Services", "Ability_Mount_Gryphon_01", { "flight master", "flight", "taxi" })
-  Add("s", L["Stable master"], "Services", "Ability_Hunter_BeastCall", { "stable master", "stable" })
+  Add("r", L["Repair"], "Vendors", TRACK .. "Repair", { "repair", "repairs" })
+  Add("g", L["Reagents"], "Vendors", TRACK .. "Reagents", { "reagents", "reagent" })
+  Add("f", L["Food and drink"], "Vendors", TRACK .. "Food", { "food", "drink", "water", "food and drink" })
+  Add("a", L["Ammunition"], "Vendors", TRACK .. "Ammunition", { "ammunition", "ammo", "arrows", "bullets" })
+  Add("i", L["Innkeeper"], "Services", TRACK .. "Innkeeper", { "innkeeper", "inn" })
+  Add("b", L["Bank"], "Services", TRACK .. "Banker", { "bank", "banker" })
+  Add("h", L["Auction house"], "Services", TRACK .. "Auctioneer", { "auction house", "auction", "auctioneer", "ah" })
+  Add("t", L["Flight master"], "Services", TRACK .. "FlightMaster", { "flight master", "flight", "taxi" })
+  Add("s", L["Stable master"], "Services", TRACK .. "StableMaster", { "stable master", "stable" })
+  -- (11.11.2026, Daniel: "plätze, an denen man kochen kann. da suche ich immer nach") places, not NPCs; the same day,
+  -- chosen from the proposals: mailbox, anvil and forge on the same way, a group of their own
+  Add("l", L["Mailbox"], "Places", TRACK .. "Mailbox", { "mailbox", "mail", "post" })
+  Add("k", L["Cooking fire"], "Places", "Spell_Fire_Fire", { "cooking fire", "fire", "campfire", "cook", "stove" })
+  Add("n", L["Anvil"], "Places", "INV_Hammer_20", { "anvil" })
+  Add("j", L["Forge"], "Places", "Spell_Fire_FlameBlades", { "forge", "smelting", "smelt" })
   Add("x", L["Rares"], "Rares", "INV_Misc_Head_Dragon_01", { "rare", "rares" })
 end
 
@@ -99,12 +113,17 @@ local function Parse()
   local data = ns.NPC_DATA
   if type(data) ~= "string" then return end
   for line in data:gmatch("[^\n]+") do
-    local id, name, title, side, rl, level, spots = line:match("^(%d+)%^([^%^]*)%^([^%^]*)%^(%a)%^([^%^]*)%^([^%^]*)%^(.+)$")
+    local id, name, title, side, rl, level, spots, display = line:match("^(%d+)%^([^%^]*)%^([^%^]*)%^(%a)%^([^%^]*)%^([^%^]*)%^([^%^]+)%^?(%d*)$")
     if id then
       -- roles as " v r C1 Pa ": a plain find of " a " cannot hit the a of Pa
       local padded = " " .. rl:gsub("([CP]?[%l%d])", "%1 ")
-      npcs[#npcs + 1] = { id = tonumber(id), name = name, title = title, side = side, roles = padded, first = rl:match("[CP]?[%l%d]"),
-        level = level ~= "" and level or nil, spots = spots, low = (name .. "\n" .. title):lower() }
+      id = tonumber(id)
+      -- ids from OBJECT_BASE on are places (the cooking fires, mailboxes, anvils or forges of one zone): the name in the
+      -- game's language (a fire by its kind: campfire, stove ...), one pin
+      local place = id >= ns.OBJECT_BASE
+      if place then name = L[PLACE_NAMES[name] or (rl == "k" and "Cooking fire") or name] end
+      npcs[#npcs + 1] = { id = id, place = place or nil, name = name, title = title, side = side, roles = padded, first = rl:match("[CP]?[%l%d]"),
+        level = level ~= "" and level or nil, spots = spots, display = tonumber(display), low = (name .. "\n" .. title):lower() }
     end
   end
   ns.NPC_DATA = nil -- the table replaces the string
@@ -138,6 +157,20 @@ function ns.Places(npc)
   end
   npc.places = p
   return p
+end
+
+-- The other roles of an NPC as symbols for its row (a vendor who also repairs): every role but the one shown as the
+-- row's symbol; "all vendors" only when it is the NPC's only other role. At most four.
+function ns.OtherRoles(npc, shown)
+  local out, vendor = {}, nil
+  for code in npc.roles:gmatch("%S+") do
+    local r = ns.Role(code)
+    if r and code ~= shown then
+      if code == "v" then vendor = r elseif #out < 4 then out[#out + 1] = r end
+    end
+  end
+  if vendor and #out == 0 and shown and not ("rgfa"):find(shown, 1, true) then out[1] = vendor end
+  return out
 end
 
 -- What a row and the tooltip say an NPC is: its roles as words ("Vendor, Repair")

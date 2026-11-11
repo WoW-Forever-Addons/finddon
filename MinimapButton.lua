@@ -15,6 +15,7 @@ local SWITCHES = {
   { label = "Drop arrow and pin on arrival", key = "clearOnArrival" },
   { label = "Close the window after a click", key = "closeOnPick" },
   { label = "Show the other faction", key = "otherSide", apply = function() if ns.RefreshWindow then ns.RunSearch() end end },
+  { label = "NPC pictures", key = "pictures", apply = function() if ns.ApplyPictures then ns.ApplyPictures() end end },
 }
 
 local function IsOn(sw) return ns.db and ns.db[sw.key] and true or false end

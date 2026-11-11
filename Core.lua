@@ -10,12 +10,16 @@ LibStub("DonCore-1.0"):Get("Settings", 1):Attach(addonName, ns) -- options from 
 ---------------------------------------------------------------------------
 ns.defaults = {
   win = {},            -- window place and size (Kit.Window store)
+  closed = {},         -- folded groups of the role list ([group] = true)
+  closedHits = {},     -- folded parts of the hit list ([1 this zone / 2 neighbouring zones / 3 further away] = true)
+  favs = {},           -- favourite roles ([role code] = true), a group of their own at the top of the list
   role = "",           -- the role chosen last ("" = none: search by text only)
   minimapButton = true,
   minimapAngle = 255,  -- between the other Don buttons (Dropdon 225)
   otherSide = false,   -- also list NPCs of the other faction
   clearOnArrival = true, -- drop arrow and pin a moment after you arrive
   closeOnPick = false, -- close the window when a result is clicked
+  pictures = true,     -- the NPC's 3D model in the rows and as a large preview (Picture.lua)
 }
 ns.SCHEMA = 1
 ns.WORDMARK = "|cff3fa9f5Find|rdon"
@@ -164,6 +168,7 @@ ns.COMMANDS = {
   { "/fd", "show or hide the window" },
   { "/fd <text>", "search by role, name or title, e.g. /fd repair" },
   { "/fd go <text>", "arrow to the nearest hit, e.g. /fd go innkeeper" },
+  { "/fd map <text>", "arrow to the nearest hit and the world map opened there" },
   { "/fd clear", "drop the arrow and the pin" },
   { "/fd options", "open the options" },
   { "/fd button", "show or hide the minimap button" },
@@ -173,6 +178,15 @@ ns.COMMANDS = {
 function ns.PrintHelp()
   ns.Print(L["Commands:"])
   for _, c in ipairs(ns.COMMANDS) do print("  |cffebebeb" .. c[1] .. "|r  |cff9ea3ad" .. L[c[2]] .. "|r") end
+end
+
+-- /fd icons: every role with its symbol in the chat, to check the symbols' paths in the client (a path the client
+-- does not know shows an empty or green square)
+local function Icons()
+  ns.Print("icons")
+  for _, r in ipairs(ns.Roles()) do
+    print(("  |T%s:18:18|t  %s  |cff9ea3ad%s|r"):format(r.icon, r.label, r.icon:gsub("|", "||")))
+  end
 end
 
 local function Diag()
@@ -197,10 +211,14 @@ function ns.Slash(msg)
     ns.Print(L["Arrow and pin dropped."])
   elseif low == "diag" then
     Diag()
+  elseif low == "icons" then
+    Icons()
   elseif low == "help" or low == "?" or low == "hilfe" then
     ns.PrintHelp()
   elseif low:match("^go%s+%S") then
     ns.GoNearest(raw:gsub("^%S+%s+", ""))
+  elseif low:match("^map%s+%S") then
+    ns.GoNearest(raw:gsub("^%S+%s+", ""), true)
   else
     ns.ShowSearch(raw)
   end
