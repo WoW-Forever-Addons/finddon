@@ -1,9 +1,9 @@
 ## Interface: 16001
 ## Title: |cff3fa9f5Find|rdon
-## Notes: NPC search for WoW Forever: the nearest trainer, vendor, repair, reagents, flight master, innkeeper, bank, auction house or rare, by role, name or title, with an arrow and a map pin to get there.
-## Notes-deDE: NPC-Suche für WoW Forever: der nächste Lehrer, Händler, Reparatur, Reagenzien, Flugmeister, Gastwirt, Bank, Auktionshaus oder Rare, nach Rolle, Name oder Titel, mit Pfeil und Kartenpin dorthin.
+## Notes: NPC search for WoW Forever: the nearest trainer, vendor, repair, reagents, flight master, innkeeper, bank, auction house or rare, by role, name, title or the goods a vendor sells, with an arrow and a map pin to get there.
+## Notes-deDE: NPC-Suche für WoW Forever: der nächste Lehrer, Händler, Reparatur, Reagenzien, Flugmeister, Gastwirt, Bank, Auktionshaus oder Rare, nach Rolle, Name, Titel oder Ware eines Händlers, mit Pfeil und Kartenpin dorthin.
 ## Author: DonCoohd
-## Version: 0.3.0
+## Version: 0.4.0
 ## Category: Map & Minimap
 ## Category-deDE: Karte und Minikarte
 ## IconTexture: Interface\AddOns\Finddon\Media\minimap
@@ -11,7 +11,7 @@
 ## SavedVariables: FinddonDB
 ## AddonCompartmentFunc: Finddon_OnAddonCompartmentClick
 ## X-Curse-Project-ID: 1797845
-## X-License: Code MIT License, Copyright (c) 2026 DonCoohd (LICENSE.txt). Data/NPCs.lua: CMaNGOS classic-db and ForeverDB.net (https://foreverdb.net), GPL v3 (Data/NPCs-LICENSE-GPLv3.txt, THIRD_PARTY_LICENSES.txt). Libs/LibStub: public domain.
+## X-License: Code MIT License, Copyright (c) 2026 DonCoohd (LICENSE.txt). Data/NPCs.lua and Data/Goods.lua: CMaNGOS classic-db and ForeverDB.net (https://foreverdb.net), GPL v3 (Data/NPCs-LICENSE-GPLv3.txt, THIRD_PARTY_LICENSES.txt). Libs/LibStub: public domain.
 
 Libs\LibStub\LibStub.lua
 Libs\DonCore\DonCore.lua
@@ -31,8 +31,10 @@ Locales\koKR.lua
 Locales\zhTW.lua
 Core.lua
 Data\NPCs.lua
+Data\Goods.lua
 Data.lua
 Search.lua
+Learn.lua
 Picture.lua
 Guide.lua
 Window.lua

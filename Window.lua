@@ -20,6 +20,7 @@ local PREVIEW_MIN_H, NAME_H, INFO_H = 430, 22, 28 -- the large picture under the
 local NEAR, MID = 100, 500 -- yards: the distance green below NEAR, yellow below MID, quiet beyond
 local EXTRA, EXTRA_MAX = 14, 4 -- the small symbols of an NPC's other roles behind its name
 local STAR = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_1:12:12|t" -- a favourite role
+local SOLD_MAX = 8 -- goods a hit's tooltip lists
 local SECTIONS = { "In this zone", "Neighbouring zones", "Further away" }
 
 -- The large picture of the hit under the mouse. (11.11.2026, Daniel: "die 3d vorschau nur wenn ich noch mit der maus
@@ -33,7 +34,7 @@ function ns.Preview(npc, result)
   hideToken = hideToken + 1
   if npc and npc.place then npc = nil end
   W.previewNpc = npc
-  local on = npc ~= nil and W.previewRoom == true and ns.db.pictures and true or false
+  local on = npc ~= nil and W.previewRoom == true and ns.db.pictures and ns.db.preview and true or false
   W.preview:SetShown(on)
   ns.ShowModel(W.preview.model, on and npc or nil)
   W.preview.name:SetText(on and npc.name or "")
@@ -163,8 +164,9 @@ local function RoleItems()
   return items
 end
 
-local function Sub(npc, mapID)
-  local what = npc.title ~= "" and npc.title or ns.RoleText(npc)
+local function Sub(npc, mapID, sold)
+  -- a hit by its goods says what it sells in the place of its title
+  local what = sold and ns.GoodsText(sold) or npc.title ~= "" and npc.title or ns.RoleText(npc)
   local zone = ns.ZoneName(mapID)
   if what ~= "" and zone ~= "" then return what .. " · " .. zone end
   return what ~= "" and what or zone
@@ -177,6 +179,15 @@ local function Tip(r)
   local rt = ns.RoleText(npc)
   if rt ~= "" then lines[#lines + 1] = { L["Role"], rt } end
   if npc.level then lines[#lines + 1] = { L["Level"], (npc.level:gsub("%+", " " .. L["Elite"])) } end
+  if r.goods then
+    for i = 1, math.min(#r.goods, SOLD_MAX) do
+      local it = r.goods[i]
+      local name = ns.GoodName(it)
+      if r.goods.limited and r.goods.limited[it] then name = name .. " (" .. L["limited supply"] .. ")" end
+      lines[#lines + 1] = { i == 1 and L["Sells"] or " ", name }
+    end
+    if #r.goods > SOLD_MAX then lines[#lines + 1] = { " ", L["+%d more"]:format(#r.goods - SOLD_MAX) } end
+  end
   local zone = ns.ZoneName(r.mapID)
   lines[#lines + 1] = { L["Zone"], ("%s %.1f, %.1f"):format(zone, r.x * 100, r.y * 100) }
   if r.dist then lines[#lines + 1] = { L["Distance"], ns.DistText(r.dist) } end
@@ -211,7 +222,7 @@ local function ResultItems()
       local it = { kind = "npc", key = r.spot and (npc.id .. ":" .. r.spot) or npc.id, result = r, icon = role and role.icon or nil,
         title = npc.level and ("%s  |cff9ea3ad%s|r"):format(npc.name, npc.level) or npc.name,
         extra = not npc.place and ns.OtherRoles(npc, role and role.code) or nil,
-        sub = Sub(npc, r.mapID), right = right, rightColor = color, rightWidth = MAP_X + MAP_W - 12,
+        sub = Sub(npc, r.mapID, r.goods), right = right, rightColor = color, rightWidth = MAP_X + MAP_W - 12,
         active = target ~= nil and target.npc == npc and (not r.spot or (target.x == r.x and target.y == r.y)) }
       it.tooltipFn = function() return Tip(r) end
       it.onHover = function(_, on) if on then ns.Preview(npc, r) else PreviewLeave() end end
@@ -226,7 +237,7 @@ local function Status()
   local n = #state.results
   local text
   if not state.role and state.text == "" then
-    text = L["Choose a role or type a name."]
+    text = L["Choose a role or type a name or goods."]
   elseif n == 0 then
     text = L["Nothing found."]
   else
@@ -246,7 +257,7 @@ end
 local function Draw(reset)
   if not (W and W.built) then return end
   W.roles:SetItems(RoleItems())
-  W.list:SetEmpty((state.role or state.text ~= "") and L["Nothing found."] or L["Choose a role or type a name."])
+  W.list:SetEmpty((state.role or state.text ~= "") and L["Nothing found."] or L["Choose a role or type a name or goods."])
   W.list:SetItems(ResultItems(), reset)
   local role = ns.Role(state.role or "")
   W:SetSubtitle(role and role.label or "")
@@ -272,7 +283,7 @@ end
 function ns.ApplyPictures()
   if not (W and W.built) then return end
   W:Layout()
-  if not ns.db.pictures then ns.Preview(nil) end
+  if not (ns.db.pictures and ns.db.preview) then ns.Preview(nil) end
   if W:IsShown() then Draw() end
 end
 
@@ -347,7 +358,7 @@ local function Build()
   W.line.tex:SetAllPoints()
   local d = Kit.C.divider
   W.line.tex:SetColorTexture(d[1], d[2], d[3], 1)
-  W.search = Kit.SearchBox(W.body, { placeholder = L["Name or title"], onChange = function(t)
+  W.search = Kit.SearchBox(W.body, { placeholder = L["Name, title or goods"], onChange = function(t)
     local text = tostring(t or "")
     if text == state.text then return end
     state.text = text

@@ -1,5 +1,13 @@
 # Changes
 
+## 0.4.0
+
+- **Search by goods:** type what you want to buy ("thread", "apple", "recipe") and the list shows the nearest vendors that sell it, with the item in the row and everything that matches in the tooltip. About 2,000 items of all vendors; limited supply is marked.
+- **Groups of goods:** the new group "Goods" in the role list: drinks, meat, fish, fruit, bread, cheese, mushrooms (what a hunter's pet eats), trade goods, recipes and bags (`/fd drinks`, `/fd go meat`).
+- **Learns in the game:** when you open a vendor's window, Finddon reads what it really sells and uses that list from then on. The shipped lists come from Classic data and ForeverDB and can differ for some vendors.
+- **Large preview off by default:** the big 3D model under the role list is an option now ("Large NPC preview"); the small pictures in the rows stay.
+- Item names are English in the data; in other languages the game's own names are loaded bit by bit and searched as well.
+
 ## 0.3.0
 
 - **All NPCs with a function:** quest NPCs and every other NPC you can talk to are in the data now, about 3,500 NPCs instead of 1,950. Type a part of the name and click the hit for arrow and pin.

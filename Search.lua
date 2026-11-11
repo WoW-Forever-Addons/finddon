@@ -7,7 +7,11 @@ local L = ns.L
 -- cooking fires are one hit each.
 --   ns.Search(role, text) -> results { { npc =, role = the role asked for, mapID =, x =, y =, dist = yards or nil,
 --     sec = 1 this zone / 2 neighbouring zone / 3 further away (nil without a position) }, ... }, state
+--     goods = the items the hit sells of what was asked for (a group of goods or a text that names goods), or nil
 -- The list is sorted by part first, by distance inside a part.
+-- (11.11.2026, Daniel: "nach Waren suchen ... dass dann der entsprechende Händler in der Nähe angezeigt wird") role may
+-- be a group of goods ("Gd" drinks): the vendors that sell something of it. The text also finds goods by name: a vendor
+-- is a hit when its name or title has the text or it sells an item named so.
 -- dist is nil on another continent and wherever the player has no position (instances); those come last, by zone
 -- and name. state: "nopos" when the player has no position.
 ---------------------------------------------------------------------------
@@ -106,9 +110,17 @@ end
 
 function ns.Search(role, text)
   role = ns.Str(role)
-  text = ns.Str(text) and text:lower():gsub("^%s+", ""):gsub("%s+$", "") or ""
+  local raw = ns.Str(text) and text:gsub("^%s+", ""):gsub("%s+$", "") or ""
+  text = raw:lower()
   local out = {}
   if not role and text == "" then return out end
+  -- goods: the vendors of the group, and the vendors of what the text names (inside the group when one is chosen)
+  local r = role and ns.Role(role)
+  local group = r and r.goods or nil
+  local asked = role
+  if group then role = nil end
+  local inGroup = group and ns.Sellers(group, "") or nil
+  local byText = text ~= "" and ns.Sellers(group, text, raw) or nil
   local side, other = ns.PlayerSide(), ns.db and ns.db.otherSide
   local api = ns.Map()
   local pc, pn, pw
@@ -132,7 +144,9 @@ function ns.Search(role, text)
   for _, npc in ipairs(ns.NPCs()) do
     if (other or not side or npc.side == "N" or npc.side == side)
         and (not role or ns.HasRole(npc, role))
-        and (text == "" or npc.low:find(text, 1, true)) then
+        and (not inGroup or inGroup[npc.id])
+        and (text == "" or npc.low:find(text, 1, true) or (byText and byText[npc.id])) then
+      local sold = byText and byText[npc.id] or inGroup and inGroup[npc.id] or nil
       local p = ns.Places(npc)
       local best, bestD = 1, nil
       if npc.place then
@@ -145,7 +159,7 @@ function ns.Search(role, text)
             local dn, dw = w[i + 1] - pn, w[i + 2] - pw
             d = math.sqrt(dn * dn + dw * dw)
           end
-          out[#out + 1] = { npc = npc, role = role, mapID = p[i], x = p[i + 1], y = p[i + 2], dist = d, spot = i,
+          out[#out + 1] = { npc = npc, role = asked, mapID = p[i], x = p[i + 1], y = p[i + 2], dist = d, spot = i,
             sec = d and Sec(p[i]) or (here and 3 or nil) }
         end
         best = nil
@@ -160,7 +174,7 @@ function ns.Search(role, text)
         end
       end
       if best and p[best] then
-        out[#out + 1] = { npc = npc, role = role, mapID = p[best], x = p[best + 1], y = p[best + 2], dist = bestD,
+        out[#out + 1] = { npc = npc, role = asked, goods = sold, mapID = p[best], x = p[best + 1], y = p[best + 2], dist = bestD,
           sec = bestD and Sec(p[best]) or (here and 3 or nil) }
       end
     end

@@ -12,6 +12,7 @@ ns.defaults = {
   win = {},            -- window place and size (Kit.Window store)
   closed = {},         -- folded groups of the role list ([group] = true)
   closedHits = {},     -- folded parts of the hit list ([1 this zone / 2 neighbouring zones / 3 further away] = true)
+  goods = {},          -- vendors' goods read in the game ([npc id] = list, Learn.lua); they go before the shipped ones
   favs = {},           -- favourite roles ([role code] = true), a group of their own at the top of the list
   role = "",           -- the role chosen last ("" = none: search by text only)
   minimapButton = true,
@@ -19,7 +20,9 @@ ns.defaults = {
   otherSide = false,   -- also list NPCs of the other faction
   clearOnArrival = true, -- drop arrow and pin a moment after you arrive
   closeOnPick = false, -- close the window when a result is clicked
-  pictures = true,     -- the NPC's 3D model in the rows and as a large preview (Picture.lua)
+  pictures = true,     -- the NPC's 3D model in the rows (Picture.lua)
+  preview = false,     -- the large model under the roles while the mouse is on a hit (Daniel 11.11.2026: "npc bild
+                       -- standardweise aus ... also das große"); needs pictures
 }
 ns.SCHEMA = 1
 ns.WORDMARK = "|cff3fa9f5Find|rdon"
@@ -166,7 +169,7 @@ SLASH_FINDDON1 = "/fd"
 SLASH_FINDDON2 = "/finddon"
 ns.COMMANDS = {
   { "/fd", "show or hide the window" },
-  { "/fd <text>", "search by role, name or title, e.g. /fd repair" },
+  { "/fd <text>", "search by role, name, title or goods, e.g. /fd repair" },
   { "/fd go <text>", "arrow to the nearest hit, e.g. /fd go innkeeper" },
   { "/fd map <text>", "arrow to the nearest hit and the world map opened there" },
   { "/fd clear", "drop the arrow and the pin" },
@@ -190,7 +193,8 @@ local function Icons()
 end
 
 local function Diag()
-  ns.Print(("NPCs %s, DonMap %s, target %s"):format(tostring(ns.NPC_COUNT or "?"),
+  ns.Print(("NPCs %s, goods %s, vendors learned %s, DonMap %s, target %s"):format(tostring(ns.NPC_COUNT or "?"), tostring(ns.GOODS_COUNT or "?"),
+    tostring(ns.LearnedCount and ns.LearnedCount() or 0),
     tostring(type(DonMapAPI) == "table" and DonMapAPI.version or "no"), tostring(ns.Target and ns.Target() and ns.Target().name or "none")))
   for _, e in ipairs(errors) do print(("  %dx [%s] %s"):format(e.count, e.context, e.msg)) end
   if #errors == 0 then print("  " .. L["No errors."]) end
