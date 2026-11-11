@@ -1,4 +1,4 @@
-local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 23)
+local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 24)
 
 ---------------------------------------------------------------------------
 -- DonCore module "Kit" (minor 1, 01.11.2026, STYLEKIT_PLAN.md "Schritt 2"; minor 2, 02.11.2026: Kit.IconButton, the symbols from
@@ -39,6 +39,10 @@ local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 23)
 -- (minor 16, 04.11.2026, Era-Test, Daniel: "die zahlen sind sehr eng an dem / geschrieben besonders die 1") Kit.Fraction(a, b):
 -- "a / b" with a space on each side of the slash (Ring, ListRow progress); a Kit.Dialog always shows at Kit.scale times
 -- its own factor (d:SetOwnScale), a SetScale from outside before Show no longer stacks on top (Luredon's 1.5)
+-- (minor 24, 11.11.2026, Profitdon's Auswertung, Daniel's picture 122142: two lines without a name, one peak of 196g
+-- pressed five days of the curve flat) LineChart: opts.legend (the labels of the series in their colours, top left) and
+-- opts.clipPeak = factor (a peak more than factor times the 90 % value is cut at the top edge, c.clipped holds its real
+-- value, opts.clipText(value) adds a note to the legend); the mouse still shows the real values
 -- (minor 23, 11.11.2026, Profitdon's Durchsicht, Daniel: "Gleiches gehört ins Kit, nicht je Addon") three blocks Profitdon
 -- had built for itself: ActionBar a:Input(opts) (a number box left of the buttons), Kit.PlaceRight (a row of controls
 -- from the right edge, hidden ones take no room), Kit.SecureButton (a protected action button in the Don look)
@@ -73,7 +77,7 @@ local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 23)
 ---------------------------------------------------------------------------
 if not Kit then return end -- the same or a newer Kit is loaded already
 local Core = LibStub("DonCore-1.0")
-Kit.VERSION = 23
+Kit.VERSION = 24
 
 local WHITE = "Interface\\Buttons\\WHITE8x8"
 local floor, ceil, max, min, abs, pi, sin, cos = math.floor, math.ceil, math.max, math.min, math.abs, math.pi, math.sin, math.cos
@@ -4469,6 +4473,8 @@ function Kit.LineChart(parent, opts)
   c.xr = Text(c, "mono", C.quiet, "RIGHT")
   c.empty = Text(c, "sub", C.quiet, "CENTER")
   c.empty:SetPoint("CENTER", c.plot, "CENTER", 0, 0)
+  c.legend = Text(c, "mono", C.quiet, "LEFT") -- (minor 24)
+  c.legend:Hide()
   c.dot = Tex(c.plot, "OVERLAY", C.hero)
   c.dot:SetSize(5, 5)
   c.dot:Hide()
@@ -4529,9 +4535,33 @@ function Kit.LineChart(parent, opts)
       Kit.Fit(self.empty, max(20, pw - 16))
       self.empty:Show()
       self.range = nil
+      self.clipped = nil
+      self.legend:Hide()
       return
     end
     self.empty:Hide()
+    -- (minor 24) one peak far above the rest: the axis ends a little over the 90 % value, the peak is cut at the top
+    self.clipped = nil
+    local cp = tonumber(opts.clipPeak)
+    if cp and cp > 1 and n >= 10 then
+      local ys = {}
+      for _, s in ipairs(self.series) do for _, p in ipairs(s.points or {}) do ys[#ys + 1] = p[2] end end
+      table.sort(ys)
+      local q = ys[max(1, floor(#ys * 0.9))]
+      if q > lo and hi > lo + (q - lo) * cp then self.clipped = hi hi = lo + (q - lo) * 1.15 end
+    end
+    if opts.legend then
+      local bits = {}
+      for si, s in ipairs(self.series) do
+        if s.label then bits[#bits + 1] = "|c" .. Hexa(s.color or (si == 1 and C.goldBright or C.blue)) .. s.label .. "|r" end
+      end
+      if self.clipped and opts.clipText then bits[#bits + 1] = tostring(opts.clipText(self.clipped) or "") end
+      self.legend:SetText(table.concat(bits, "   "))
+      self.legend:ClearAllPoints()
+      self.legend:SetPoint("TOPLEFT", self.plot, "TOPLEFT", 6, -2)
+      Kit.Fit(self.legend, max(20, pw - 12))
+      self.legend:Show()
+    else self.legend:Hide() end
     if hi - lo <= 0 then lo, hi = lo - 1, hi + 1 end
     local pad = (hi - lo) * 0.08
     lo, hi = lo - pad, hi + pad
@@ -4551,7 +4581,7 @@ function Kit.LineChart(parent, opts)
     self.xr:ClearAllPoints() self.xr:SetPoint("TOPRIGHT", self.plot, "BOTTOMRIGHT", 0, -3)
     Kit.Fit(self.xl, floor(pw / 2) - 4) Kit.Fit(self.xr, floor(pw / 2) - 4)
     local function X(x) return (x - x0) / (x1 - x0) * pw end
-    local function Y(y) return (y - lo) / (hi - lo) * ph end
+    local function Y(y) return min(ph, (y - lo) / (hi - lo) * ph) end
     local k, lines = 0, not self.noLines and self.plot.CreateLine ~= nil
     for si, s in ipairs(self.series) do
       local pts = s.points or {}
@@ -4589,7 +4619,7 @@ function Kit.LineChart(parent, opts)
         if si == 1 then
           title = (opts.formatX or tostring)(best[1])
           self.dot:ClearAllPoints()
-          self.dot:SetPoint("CENTER", self.plot, "BOTTOMLEFT", (best[1] - r[1]) / (r[2] - r[1]) * self.pw, (best[2] - r[3]) / (r[4] - r[3]) * self.ph)
+          self.dot:SetPoint("CENTER", self.plot, "BOTTOMLEFT", (best[1] - r[1]) / (r[2] - r[1]) * self.pw, min(self.ph, (best[2] - r[3]) / (r[4] - r[3]) * self.ph))
           self.dot:Show()
         end
         lines[#lines + 1] = { s.label or ("#" .. si), fy(best[2]), s.color or (si == 1 and C.goldBright or C.blue) }

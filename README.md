@@ -15,7 +15,7 @@ Ordner `Finddon` in den AddOns-Ordner des Clients kopieren (`...\Interface\AddOn
 - **Zur Karte:** Knopf "Karte" in jeder Trefferzeile (oder `/fd map <Text>`) öffnet die Weltkarte der Zone.
 - **Pfeil und Pin:** Klick auf einen Treffer setzt DonMaps Pfeil und einen Pin auf Welt- und Minikarte. Rechtsklick,
   `/fd clear` oder die Ankunft räumen auf.
-- Rollen und Oberfläche in neun Sprachen, NPC-Namen in dieser Fassung englisch. Keine Questgeber (die zeigt Questdon).
+- Rollen und Oberfläche in neun Sprachen, NPC-Namen in dieser Fassung englisch. Seit 0.3.0 auch Quest-NPCs und alle ansprechbaren NPCs (rund 3.500).
 
 ## Befehle
 - `/fd` (oder `/finddon`) Fenster zeigen oder ausblenden

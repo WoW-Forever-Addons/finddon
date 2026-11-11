@@ -7,7 +7,7 @@ local L = ns.L
 -- It is read on the first search (ns.NPCs()), not at login, and the string is dropped after that.
 -- Role codes: v vendor, r repair, g reagents, f food and drink, a ammunition, s stable master, t flight master,
 -- k cooking fire, l mailbox, n anvil, j forge (places: one line per zone and kind with all its spots), i innkeeper, b banker, h auctioneer, m riding trainer, e pet trainer, w weapon master, x rare,
--- C<class ID in base 36> class trainer, P<letter> profession trainer.
+-- C<class ID in base 36> class trainer, P<letter> profession trainer, q quest NPC, o other NPC (to talk to, no service).
 ---------------------------------------------------------------------------
 local ICON = "Interface\\Icons\\"
 -- (11.11.2026, Daniel: "Könnte man an den Zeichen was ändern?", chosen: the game's own symbols) the symbols of the
@@ -77,6 +77,10 @@ local function BuildRoles()
   Add("k", L["Cooking fire"], "Places", "Spell_Fire_Fire", { "cooking fire", "fire", "campfire", "cook", "stove" })
   Add("n", L["Anvil"], "Places", "INV_Hammer_20", { "anvil" })
   Add("j", L["Forge"], "Places", "Spell_Fire_FlameBlades", { "forge", "smelting", "smelt" })
+  -- (11.11.2026, Daniel: "Wieso nehmen wir da nicht alle npcs auf? ... Manchmal sucht man ja auch quest npcs") every NPC
+  -- with a function is in the data: quest NPCs and the rest one can talk to, found by name or listed here
+  Add("q", L["Quest NPCs"], "NPCs", "Interface\\GossipFrame\\AvailableQuestIcon", { "quest", "quests", "quest npc", "quest npcs", "quest giver" })
+  Add("o", L["Other NPCs"], "NPCs", "Interface\\GossipFrame\\GossipGossipIcon", { "other", "other npcs", "npc", "npcs" })
   Add("x", L["Rares"], "Rares", "INV_Misc_Head_Dragon_01", { "rare", "rares" })
 end
 

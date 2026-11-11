@@ -1,5 +1,10 @@
 # Changes
 
+## 0.3.0
+
+- **All NPCs with a function:** quest NPCs and every other NPC you can talk to are in the data now, about 3,500 NPCs instead of 1,950. Type a part of the name and click the hit for arrow and pin.
+- **New roles:** "Quest NPCs" and "Other NPCs" in the role list (`/fd quest`); a small quest symbol behind the name shows that a vendor or trainer also has quests.
+
 ## 0.2.0
 
 - **NPC pictures:** every hit shows the NPC's 3D model instead of the role symbol, and a large preview appears over the lower part of the role list while the mouse is on a hit (window tall enough; option "NPC pictures"). WoW Forever's new NPCs may have none.
