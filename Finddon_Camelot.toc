@@ -3,7 +3,7 @@
 ## Notes: NPC search for WoW Forever: the nearest trainer, vendor, repair, reagents, flight master, innkeeper, bank, auction house or rare, by role, name, title or the goods a vendor sells, with an arrow and a map pin to get there.
 ## Notes-deDE: NPC-Suche für WoW Forever: der nächste Lehrer, Händler, Reparatur, Reagenzien, Flugmeister, Gastwirt, Bank, Auktionshaus oder Rare, nach Rolle, Name, Titel oder Ware eines Händlers, mit Pfeil und Kartenpin dorthin.
 ## Author: DonCoohd
-## Version: 0.4.0
+## Version: 0.4.1
 ## Category: Map & Minimap
 ## Category-deDE: Karte und Minikarte
 ## IconTexture: Interface\AddOns\Finddon\Media\minimap

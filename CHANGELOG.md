@@ -1,5 +1,9 @@
 # Changes
 
+## 0.4.1
+
+- **Cleaner text in narrow places:** text that is shrunk to fit keeps one font and size, also after the game window changes its size.
+
 ## 0.4.0
 
 - **Search by goods:** type what you want to buy ("thread", "apple", "recipe") and the list shows the nearest vendors that sell it, with the item in the row and everything that matches in the tooltip. About 2,000 items of all vendors; limited supply is marked.

@@ -1,4 +1,4 @@
-# Finddon 0.4.0 (WoW Forever)
+# Finddon 0.4.1 (WoW Forever)
 
 NPC-Suche für World of Warcraft: Forever (Client "Camelot", Interface 16001): der nächste Lehrer, Händler, Reparatur,
 Flugmeister, Gastwirt, die nächste Bank, das nächste Auktionshaus oder ein Rare, mit Pfeil und Kartenpin dorthin.
