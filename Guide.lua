@@ -57,11 +57,14 @@ function ns.NewPin(parent, size, where)
   b.textHolder:SetPoint("TOP", b, "BOTTOM", 0, -1)
   b.label = b.textHolder:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
   b.label:SetPoint("TOP", b.textHolder, "TOP", 0, -2)
-  -- a dark plate behind the name: gold letters alone were lost in the map's own lettering
-  b.plate = b.textHolder:CreateTexture(nil, "BACKGROUND")
-  b.plate:SetColorTexture(0, 0, 0, 0.7)
-  b.plate:SetPoint("TOPLEFT", b.label, "TOPLEFT", -4, 2)
-  b.plate:SetPoint("BOTTOMRIGHT", b.label, "BOTTOMRIGHT", 4, -2)
+  -- (16.11.2026, Daniel with a picture: "den hintergrund beim namen weg bitte") no dark plate behind the name any
+  -- more; an outline and a shadow keep the gold letters apart from the map's own lettering
+  do
+    local font, size = b.label:GetFont()
+    if font and b.label.SetFont then b.label:SetFont(font, size or 10, "OUTLINE") end
+    if b.label.SetShadowColor then b.label:SetShadowColor(0, 0, 0, 1) end
+    if b.label.SetShadowOffset then b.label:SetShadowOffset(1, -1) end
+  end
   if b.RegisterForClicks then b:RegisterForClicks("LeftButtonUp", "RightButtonUp") end
   b:SetScript("OnEnter", function(self)
     if src and src.opts.tooltip then ns.SafeCall("pin tooltip", src.opts.tooltip, self) end
@@ -86,7 +89,6 @@ function ns.PaintPin(b, points, size, where, scale)
   if scale > 0 and b.textHolder.SetScale then pcall(b.textHolder.SetScale, b.textHolder, 1 / scale) end
   local text = (where or b.where) == "world" and tostring(one.label or "") or ""
   b.label:SetText(text)
-  b.plate:SetShown(text ~= "")
 end
 
 function ns.ClearTarget()

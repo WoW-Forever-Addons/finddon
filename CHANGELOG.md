@@ -1,5 +1,9 @@
 # Changes
 
+## 0.4.3
+
+- **Map pin:** the name under the pin on the world map no longer sits on a dark plate; an outline keeps it readable.
+
 ## 0.4.2
 
 - **Search with a role chosen:** with a role picked on the left, the search box no longer hides everything else. What the text finds outside that role follows below in a part of its own, "Other roles", nearest first; the footer counts it.
