@@ -1,5 +1,10 @@
 # Changes
 
+## 0.4.2
+
+- **Search with a role chosen:** with a role picked on the left, the search box no longer hides everything else. What the text finds outside that role follows below in a part of its own, "Other roles", nearest first; the footer counts it.
+- **Shared kit:** small fixes of the common window kit (table heads, options).
+
 ## 0.4.1
 
 - **Cleaner text in narrow places:** text that is shrunk to fit keeps one font and size, also after the game window changes its size.

@@ -9,7 +9,7 @@ local Kit = Core:Get("Kit", 22) or Core:Get("Kit", 10) or Core:Get("Kit", 1)
 -- Left click on a hit: arrow and pin (Guide.lua). Right click: drop them. The same role again: no role.
 ---------------------------------------------------------------------------
 local W
-local state = { role = nil, text = "", results = {}, note = nil, at = nil }
+local state = { role = nil, text = "", results = {}, others = {}, note = nil, at = nil }
 -- (11.11.2026, proposals 8 and 5) the role column 204 wide (was 190: long names and the favourite's star were tight)
 local ROLE_W, ROLE_W_NARROW, NARROW, SEARCH_H, GAP = 204, 160, 540, 28, 6
 local WIN_W, WIN_H = 660, 520
@@ -203,15 +203,9 @@ local function ResultItems()
   -- its part (FinddonDB.closedHits). Without a position the hits have no part and the list has no heads.
   local counts, sec = {}, nil
   for _, r in ipairs(state.results) do if r.sec then counts[r.sec] = (counts[r.sec] or 0) + 1 end end
-  for _, r in ipairs(state.results) do
-    if r.sec and r.sec ~= sec then
-      sec = r.sec
-      items[#items + 1] = { kind = "group", sec = sec, text = L[SECTIONS[sec]], count = counts[sec],
-        collapsed = ns.db.closedHits[sec] and true or false }
-    end
-    if not (r.sec and ns.db.closedHits[r.sec]) then
+  local function Row(r, own)
       local npc = r.npc
-      local role = ns.Role(state.role or "") or ns.Role(npc.first)
+      local role = not own and ns.Role(state.role or "") or ns.Role(npc.first)
       -- (proposal 3) the distance in a colour by nearness; on another continent that continent's name in its place
       local right, color = ns.DistText(r.dist), nil
       if r.dist then
@@ -227,6 +221,23 @@ local function ResultItems()
       it.tooltipFn = function() return Tip(r) end
       it.onHover = function(_, on) if on then ns.Preview(npc, r) else PreviewLeave() end end
       items[#items + 1] = it
+  end
+  for _, r in ipairs(state.results) do
+    if r.sec and r.sec ~= sec then
+      sec = r.sec
+      items[#items + 1] = { kind = "group", sec = sec, text = L[SECTIONS[sec]], count = counts[sec],
+        collapsed = ns.db.closedHits[sec] and true or false }
+    end
+    if not (r.sec and ns.db.closedHits[r.sec]) then Row(r) end
+  end
+  -- (16.11.2026, Daniel with a picture: a recipe at one vendor only, "das muss es doch auch woanders geben?!"; a role
+  -- was still chosen on the left. Chosen: "Weitere Treffer darunter") with a role and a text the hits of the text
+  -- outside that role follow in a part of their own, nearest first, each with its own role's symbol
+  if state.others[1] then
+    items[#items + 1] = { kind = "group", sec = "other", text = L["Other roles"], count = #state.others,
+      collapsed = ns.db.closedHits.other and true or false }
+    if not ns.db.closedHits.other then
+      for _, r in ipairs(state.others) do Row(r, true) end
     end
   end
   return items
@@ -234,14 +245,15 @@ end
 
 local function Status()
   if not W then return end
-  local n = #state.results
+  local n, more = #state.results, #state.others
   local text
   if not state.role and state.text == "" then
     text = L["Choose a role or type a name or goods."]
-  elseif n == 0 then
+  elseif n == 0 and more == 0 then
     text = L["Nothing found."]
   else
     text = (n == 1 and L["%d hit"] or L["%d hits"]):format(n)
+    if more > 0 then text = text .. " · " .. L["%d in other roles"]:format(more) end
     if state.note == "nopos" then text = text .. " · " .. L["No position here: sorted by zone."] end
   end
   -- (11.11.2026, proposal 8) with an arrow set the footer takes a click: it drops arrow and pin
@@ -266,6 +278,25 @@ end
 
 local function Run(reset)
   state.results, state.note = ns.Search(state.role, state.text)
+  -- the hits of the text outside the chosen role (see ResultItems)
+  state.others = {}
+  if state.role and state.text:find("%S") then
+    local have = {}
+    for _, r in ipairs(state.results) do have[r.npc.id .. ":" .. (r.spot or 0)] = true end
+    for _, r in ipairs((ns.Search(nil, state.text))) do
+      if not have[r.npc.id .. ":" .. (r.spot or 0)] then
+        r.sec = nil
+        state.others[#state.others + 1] = r
+      end
+    end
+    table.sort(state.others, function(a, b)
+      if a.dist and b.dist then if a.dist ~= b.dist then return a.dist < b.dist end
+      elseif a.dist or b.dist then return a.dist ~= nil end
+      if a.npc.name ~= b.npc.name then return a.npc.name < b.npc.name end
+      if a.npc.id ~= b.npc.id then return a.npc.id < b.npc.id end
+      return (a.spot or 0) < (b.spot or 0)
+    end)
+  end
   local api = ns.Map()
   if api then
     local c, n, w = api.PlayerWorld()
