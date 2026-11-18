@@ -23,7 +23,24 @@ ns.defaults = {
   pictures = true,     -- the NPC's 3D model in the rows (Picture.lua)
   preview = false,     -- the large model under the roles while the mouse is on a hit (Daniel 11.11.2026: "npc bild
                        -- standardweise aus ... also das große"); needs pictures
+  -- (16.11.2026, Daniel: Blizzard look for all Don addons, "Sollte Standart sein") the search window from the game's own
+  -- templates (DonCore Blizz); a client without them keeps the Don look without a word
+  blizzLook = true,
 }
+
+-- (16.11.2026) the kit that builds Finddon's window: DonCore's Kit, or with the option blizzLook the same blocks from
+-- the game's own templates (DonCore module Blizz). Returns the kit, true when it is Blizzard's, the Blizz module and,
+-- for the Kit, why (diag).
+function ns.LookKit()
+  local Core = LibStub("DonCore-1.0")
+  local Kit = Core:Get("Kit", 22) or Core:Get("Kit", 10) or Core:Get("Kit", 1)
+  if not (ns.db and ns.db.blizzLook) then return Kit, false, nil, "kit" end
+  local Bz = Core:Get("Blizz", 5)
+  if not Bz then return Kit, false, nil, "kit (no DonCore Blizz)" end
+  local kit, miss = Bz.Kit()
+  if kit then return kit, true, Bz, "blizzard" end
+  return Kit, false, Bz, "kit (missing: " .. tostring(miss) .. ")"
+end
 ns.SCHEMA = 1
 ns.WORDMARK = "|cff3fa9f5Find|rdon"
 
@@ -175,6 +192,7 @@ ns.COMMANDS = {
   { "/fd clear", "drop the arrow and the pin" },
   { "/fd options", "open the options" },
   { "/fd button", "show or hide the minimap button" },
+  { "/fd diag", "report to copy (diag chat: in the chat)" },
   { "/fd help", "this list" },
 }
 
@@ -192,12 +210,51 @@ local function Icons()
   end
 end
 
-local function Diag()
-  ns.Print(("NPCs %s, goods %s, vendors learned %s, DonMap %s, target %s"):format(tostring(ns.NPC_COUNT or "?"), tostring(ns.GOODS_COUNT or "?"),
+-- (16.11.2026, Daniel: "bei allen addons soll der diag befehl ein fenster zum kopieren aufmachen") the report as lines
+-- without colours: /fd diag shows them in a copy window, /fd diag chat prints them as before
+function ns.DiagLines()
+  local lines = {}
+  local meta = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+  local version = meta and ns.Call(meta, "Finddon", "Version")
+  local build, _, _, toc = nil, nil, nil, nil
+  if GetBuildInfo then build, _, _, toc = GetBuildInfo() end
+  lines[#lines + 1] = ("Finddon %s, client %s (%s), locale %s"):format(tostring(version or "?"), tostring(build or "?"),
+    tostring(toc or "?"), tostring(GetLocale and GetLocale() or "?"))
+  lines[#lines + 1] = ("NPCs %s, goods %s, vendors learned %s, DonMap %s, target %s"):format(tostring(ns.NPC_COUNT or "?"), tostring(ns.GOODS_COUNT or "?"),
     tostring(ns.LearnedCount and ns.LearnedCount() or 0),
-    tostring(type(DonMapAPI) == "table" and DonMapAPI.version or "no"), tostring(ns.Target and ns.Target() and ns.Target().name or "none")))
-  for _, e in ipairs(errors) do print(("  %dx [%s] %s"):format(e.count, e.context, e.msg)) end
-  if #errors == 0 then print("  " .. L["No errors."]) end
+    tostring(type(DonMapAPI) == "table" and DonMapAPI.version or "no"), tostring(ns.Target and ns.Target() and ns.Target().name or "none"))
+  -- (16.11.2026) the window's look and why
+  lines[#lines + 1] = ("window look: option %s, built as %s, options %s"):format(ns.db and ns.db.blizzLook and "on" or "off",
+    tostring(ns.WindowLook and ns.WindowLook() or "not built yet"), tostring(ns.OptionsLook and ns.OptionsLook() or "?"))
+  for _, e in ipairs(errors) do lines[#lines + 1] = ("%dx [%s] %s"):format(e.count, e.context, e.msg) end
+  if #errors == 0 then lines[#lines + 1] = L["No errors."] end
+  return lines
+end
+
+function ns.PrintDiag()
+  ns.Print("diag")
+  for _, l in ipairs(ns.DiagLines()) do print("  " .. l) end
+end
+
+-- the copy window: the game's look with the option on and DonCore Blizz there, else the Kit; a window that cannot be
+-- built gives the chat
+function ns.ShowDiag()
+  local ok, shown = pcall(function()
+    local title, hint = "Finddon diag", L["Ctrl+A selects all, Ctrl+C copies."]
+    local text = table.concat(ns.DiagLines(), "\n")
+    local _, blizz, Bz = ns.LookKit()
+    if blizz and Bz and Bz.kit and Bz.kit.ShowCopy then
+      local okB, d = pcall(Bz.kit.ShowCopy, title, hint, text)
+      if okB and d then return d end
+      Record("diag blizz look", d)
+    end
+    local Kit = LibStub("DonCore-1.0"):Get("Kit", 1)
+    if not (Kit and Kit.ShowCopy) then return nil end
+    return Kit.ShowCopy(title, hint, text)
+  end)
+  if not ok then Record("diag window", shown) end
+  if not (ok and shown) then ns.PrintDiag() end
+  return ok and shown or nil
 end
 
 function ns.Slash(msg)
@@ -214,7 +271,9 @@ function ns.Slash(msg)
     ns.ClearTarget()
     ns.Print(L["Arrow and pin dropped."])
   elseif low == "diag" then
-    Diag()
+    ns.ShowDiag()
+  elseif low == "diag chat" then
+    ns.PrintDiag()
   elseif low == "icons" then
     Icons()
   elseif low == "help" or low == "?" or low == "hilfe" then

@@ -1,5 +1,11 @@
 # Changes
 
+## 0.5.0
+
+- **Finddon in the game's look:** the search window now has the game's own frame, buttons, search box and lists. The options open in the game's settings (Options > AddOns > Finddon). This is the new default; the Don look is one switch away under General, "Windows in the game's look".
+- **`/fd diag`:** the report opens in a window you can copy from, in the game's look. `/fd diag chat` prints it in the chat as before.
+- **Shared Don library:** updated to the current version of the Don addons.
+
 ## 0.4.3
 
 - **Map pin:** the name under the pin on the world map no longer sits on a dark plate; an outline keeps it readable.

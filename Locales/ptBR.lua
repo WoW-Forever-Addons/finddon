@@ -12,6 +12,8 @@ L["arrow to the nearest hit, e.g. /fd go innkeeper"] = "seta para o resultado ma
 L["drop the arrow and the pin"] = "remover a seta e o marcador"
 L["open the options"] = "abrir as opções"
 L["show or hide the minimap button"] = "mostrar ou ocultar o botão do minimapa"
+L["report to copy (diag chat: in the chat)"] = "relatório para copiar (diag chat: no chat)"
+L["Ctrl+A selects all, Ctrl+C copies."] = "Ctrl+A seleciona tudo, Ctrl+C copia."
 L["this list"] = "esta lista"
 L["%s trainer"] = "Instrutor: %s"
 L["Weapon master"] = "Mestre de armas"
@@ -138,3 +140,8 @@ L["Bags"] = "Bolsas"
 L["Sells"] = "Vende"
 L["limited supply"] = "estoque limitado"
 L["+%d more"] = "+%d mais"
+
+-- (16.11.2026) the window in the game's look (option blizzLook)
+L["Windows in the game's look"] = "Janelas com o visual do jogo"
+L["Finddon's search window looks like the game's own: the game's frame, buttons, search box and lists. The options then open in the game's settings (Options > AddOns > Finddon) after a /reload."] = "A janela de busca do Finddon fica como as do jogo: a moldura, os botões, o campo de busca e as listas do jogo. As opções passam a abrir nas configurações do jogo (Opções > AddOns > Finddon) depois de um /reload."
+L["The search window could not be built in the game's look, it opens in the Don look. /fd diag says why."] = "A janela de busca não pôde ser criada com o visual do jogo e abre no visual Don. /fd diag diz por quê."

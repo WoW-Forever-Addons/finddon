@@ -12,6 +12,8 @@ L["arrow to the nearest hit, e.g. /fd go innkeeper"] = "flèche vers le résulta
 L["drop the arrow and the pin"] = "retirer la flèche et le repère"
 L["open the options"] = "ouvrir les options"
 L["show or hide the minimap button"] = "afficher ou masquer le bouton de la minicarte"
+L["report to copy (diag chat: in the chat)"] = "rapport à copier (diag chat : dans le chat)"
+L["Ctrl+A selects all, Ctrl+C copies."] = "Ctrl+A sélectionne tout, Ctrl+C copie."
 L["this list"] = "cette liste"
 L["%s trainer"] = "Instructeur : %s"
 L["Weapon master"] = "Maître d'armes"
@@ -138,3 +140,8 @@ L["Bags"] = "Sacs"
 L["Sells"] = "Vend"
 L["limited supply"] = "stock limité"
 L["+%d more"] = "+%d autres"
+
+-- (16.11.2026) the window in the game's look (option blizzLook)
+L["Windows in the game's look"] = "Fenêtres dans le style du jeu"
+L["Finddon's search window looks like the game's own: the game's frame, buttons, search box and lists. The options then open in the game's settings (Options > AddOns > Finddon) after a /reload."] = "La fenêtre de recherche de Finddon ressemble à celles du jeu : le cadre, les boutons, le champ de recherche et les listes du jeu. Les options s'ouvrent alors dans les réglages du jeu (Options > AddOns > Finddon) après un /reload."
+L["The search window could not be built in the game's look, it opens in the Don look. /fd diag says why."] = "La fenêtre de recherche n'a pas pu être construite dans le style du jeu, elle s'ouvre dans le style Don. /fd diag indique pourquoi."

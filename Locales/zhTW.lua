@@ -12,6 +12,8 @@ L["arrow to the nearest hit, e.g. /fd go innkeeper"] = "箭頭指向最近的結
 L["drop the arrow and the pin"] = "移除箭頭與標記"
 L["open the options"] = "開啟選項"
 L["show or hide the minimap button"] = "顯示或隱藏小地圖按鈕"
+L["report to copy (diag chat: in the chat)"] = "可複製的報告（diag chat：輸出到聊天）"
+L["Ctrl+A selects all, Ctrl+C copies."] = "Ctrl+A 全選，Ctrl+C 複製。"
 L["this list"] = "此清單"
 L["%s trainer"] = "%s訓練師"
 L["Weapon master"] = "武器大師"
@@ -138,3 +140,8 @@ L["Bags"] = "背包"
 L["Sells"] = "販售"
 L["limited supply"] = "限量供應"
 L["+%d more"] = "另有 %d 項"
+
+-- (16.11.2026) the window in the game's look (option blizzLook)
+L["Windows in the game's look"] = "遊戲風格的視窗"
+L["Finddon's search window looks like the game's own: the game's frame, buttons, search box and lists. The options then open in the game's settings (Options > AddOns > Finddon) after a /reload."] = "Finddon 的搜尋視窗看起來就像遊戲本身的視窗：使用遊戲的外框、按鈕、搜尋框和清單。/reload 之後，選項會在遊戲的設定中開啟（選項 > 插件 > Finddon）。"
+L["The search window could not be built in the game's look, it opens in the Don look. /fd diag says why."] = "搜尋視窗無法以遊戲風格建立，改以 Don 風格開啟。/fd diag 會說明原因。"

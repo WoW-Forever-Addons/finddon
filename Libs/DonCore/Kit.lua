@@ -1,4 +1,4 @@
-local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 26)
+local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 28)
 
 ---------------------------------------------------------------------------
 -- DonCore module "Kit" (minor 1, 01.11.2026, STYLEKIT_PLAN.md "Schritt 2"; minor 2, 02.11.2026: Kit.IconButton, the symbols from
@@ -82,7 +82,7 @@ local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 26)
 ---------------------------------------------------------------------------
 if not Kit then return end -- the same or a newer Kit is loaded already
 local Core = LibStub("DonCore-1.0")
-Kit.VERSION = 26
+Kit.VERSION = 28
 
 local WHITE = "Interface\\Buttons\\WHITE8x8"
 local floor, ceil, max, min, abs, pi, sin, cos = math.floor, math.ceil, math.max, math.min, math.abs, math.pi, math.sin, math.cos
@@ -165,10 +165,33 @@ Kit.UpdateQuestColors()
 
 -- Blizzard's rule (GetQuestDifficultyColor): 5+ above red, 3+ orange, from 2 below yellow, within the green range green,
 -- else grey. playerLevel: default the player's level.
+-- (Kit 28, 18.11.2026, player's picture: Blizzard's list green, ours grey at the same [35]) for the player's own level
+-- the game's GetQuestDifficultyColor decides, so the colour is always Blizzard's; the own rule below only without it or
+-- for another level (a zone's middle).
+local function GameDifficulty(level)
+  if type(GetQuestDifficultyColor) ~= "function" then return nil end
+  local ok, c = pcall(GetQuestDifficultyColor, level)
+  if not ok or type(c) ~= "table" then return nil end
+  local game = type(QuestDifficultyColors) == "table" and QuestDifficultyColors or nil
+  if game then
+    for _, k in ipairs(Kit.QUEST_KEYS) do if game[k] == c then return k end end
+    for _, k in ipairs(Kit.QUEST_KEYS) do
+      local g = game[k]
+      if type(g) == "table" and g.r == c.r and g.g == c.g and g.b == c.b then return k end
+    end
+  end
+  return nil
+end
+
 function Kit.QuestDifficulty(level, playerLevel)
   level = tonumber(level)
   if not level then return "trivial" end
-  playerLevel = tonumber(playerLevel) or (type(UnitLevel) == "function" and tonumber(UnitLevel("player"))) or 1
+  local own = type(UnitLevel) == "function" and tonumber(UnitLevel("player")) or nil
+  if not tonumber(playerLevel) or tonumber(playerLevel) == own then
+    local k = GameDifficulty(level)
+    if k then return k end
+  end
+  playerLevel = tonumber(playerLevel) or own or 1
   local d = level - playerLevel
   if d >= 5 then return "impossible" elseif d >= 3 then return "verydifficult" elseif d >= -2 then return "difficult" end
   local range
@@ -3229,6 +3252,8 @@ end
 -- (minor 10) ItemGrid: item symbols (Kit.ItemIcon) in rows, as many per row as the width takes; nothing scrolls, the
 -- caller gives the room. opts.size (default 28), opts.gap (4), opts.onClick(icon, button, entry).
 -- g:SetItems({ { itemID, quality, count, unusable (true or a reason text), tipFallback (minor 19) }, ... }) or plain item ids,
+-- (minor 27, Profitdon's Verkaufen-Seite 17.11.2026) entry.dim (the symbol faded), entry.selected (gold edge),
+-- entry.tipLines (grey lines under the item tooltip),
 -- g:Layout(w) returns the height (0 without items), g.icons
 ---------------------------------------------------------------------------
 function Kit.ItemGrid(parent, opts)
@@ -3251,6 +3276,9 @@ function Kit.ItemGrid(parent, opts)
       b:SetUnusable(en.unusable)
       b.reason = type(en.unusable) == "string" and en.unusable or nil
       b.tipFallback = en.tipFallback -- (minor 19)
+      b.extraTip = en.tipLines -- (minor 27)
+      Call(b, "SetAlpha", en.dim and 0.45 or 1)
+      if en.selected then b.bd:SetColor(C.goldBright) end
       b:Show()
     end
     for i = #self.entries + 1, #self.icons do self.icons[i]:Hide() self.icons[i].entry = nil end
@@ -3648,6 +3676,7 @@ function Kit.ShowCopy(title, hint, text, words)
       self.edit:SetWidth(max(20, w - 16))
     end })
     d.hint = Text(d.body, "sub", C.muted)
+    Call(d.hint, "SetMaxLines", 0) -- (Kit 28, 18.11.2026, player: "sehe den link leider nirgends") Text() allows one line
     d.scroll = CreateFrame("ScrollFrame", nil, d.body)
     Fill(d.scroll, C.input)
     Border(d.scroll, C.mid)

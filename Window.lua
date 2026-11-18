@@ -4,15 +4,23 @@ local Core = LibStub("DonCore-1.0")
 local Kit = Core:Get("Kit", 22) or Core:Get("Kit", 10) or Core:Get("Kit", 1)
 
 ---------------------------------------------------------------------------
--- The window, DonCore's kit only: Kit.Window "FinddonPanel" (place and size in FinddonDB.win), on the left the roles
+-- The window: Kit.Window "FinddonPanel" (place and size in FinddonDB.win), on the left the roles
 -- (Kit.List with group headers), on the right a search box over the hits (Kit.List), nearest first.
 -- Left click on a hit: arrow and pin (Guide.lua). Right click: drop them. The same role again: no role.
+-- (16.11.2026, Daniel: Blizzard look for all Don addons, "Sollte Standart sein") the blocks come from UI: the Kit, or
+-- with the option blizzLook the same blocks from the game's own templates (DonCore Blizz, window "FinddonPanelBlizz").
+-- Picked when the window is built (PickUI); a build that fails with Blizzard's blocks is done again with the Kit.
 ---------------------------------------------------------------------------
+local UI = Kit
+local lookNote = nil -- "blizzard" or "kit", with the reason when the option is on (diag, ns.WindowLook)
 local W
 local state = { role = nil, text = "", results = {}, others = {}, note = nil, at = nil }
 -- (11.11.2026, proposals 8 and 5) the role column 204 wide (was 190: long names and the favourite's star were tight)
 local ROLE_W, ROLE_W_NARROW, NARROW, SEARCH_H, GAP = 204, 160, 540, 28, 6
 local WIN_W, WIN_H = 660, 520
+-- the Kit's windows show at 80 %, the game's frame at 100 %: the Blizzard window a bit smaller (the body keeps room
+-- for the large preview, PREVIEW_MIN_H)
+local BZ_W, BZ_H = 600, 530
 local MOVED = 15 -- yards the player must have moved before an open list is sorted anew
 -- the row's map button: width, distance from the right edge (room for the distance or a continent's name)
 local MAP_W, MAP_X = 46, 100
@@ -51,9 +59,9 @@ function ns.Preview(npc, result)
   W.preview.where:SetText(where)
   if on then
     local w = (W.preview._w or 150) - 8
-    Kit.Fit(W.preview.name, w)
-    Kit.Fit(W.preview.what, w)
-    Kit.Fit(W.preview.where, w)
+    UI.Fit(W.preview.name, w)
+    UI.Fit(W.preview.what, w)
+    UI.Fit(W.preview.where, w)
   end
 end
 
@@ -70,11 +78,11 @@ end
 
 -- a hit row with the NPC's picture over its role symbol (list kind "npc")
 local function MakeRow(parent)
-  local r = Kit.ListRow(parent)
+  local r = UI.ListRow(parent)
   r.model = ns.NewModel(r, true)
   -- (11.11.2026, Daniel: "direkt zur map springen", then "anstatt mit shift irgendwas zu klicken einfach ein button vor
   -- den yards mit show on map") a button left of the distance: arrow, pin and the world map on that zone
-  r.map = Kit.Button(r, L["Map"], { small = true, onClick = function()
+  r.map = UI.Button(r, L["Map"], { small = true, onClick = function()
     local res = r.item and r.item.result
     if not res then return end
     if ns.SetTarget(res) then ns.ShowOnMap(res) end
@@ -99,11 +107,11 @@ local function MakeRow(parent)
     if self.right then
       self.right:ClearAllPoints()
       self.right:SetPoint("RIGHT", self, "RIGHT", -12, 0)
-      Kit.Fit(self.right, MAP_X - 18) -- a continent's name ends before the map button
+      UI.Fit(self.right, MAP_X - 18) -- a continent's name ends before the map button
     end
     -- the symbols follow the name; one that would reach the map button stays away
     local roles = self.item and self.item.extra
-    local tw = Kit.TextWidth and Kit.TextWidth(self.title) or 0
+    local tw = UI.TextWidth and UI.TextWidth(self.title) or 0
     local room = (tonumber(w) or 0) - (MAP_X + MAP_W) - 6
     for i, t in ipairs(self.extra) do
       local role = roles and roles[i]
@@ -365,12 +373,14 @@ local function Place(win, w, h)
 end
 
 local function Build()
-  W = Kit.Window("FinddonPanel", { title = "Finddon", logo = "Interface\\AddOns\\Finddon\\Media\\minimap",
-    options = "Finddon", hint = "/fd options", footer = true, store = ns.db.win, width = WIN_W, height = WIN_H,
-    min = { 420, 300 }, max = { 1000, 900 },
+  local blizz = UI ~= Kit
+  W = UI.Window(blizz and "FinddonPanelBlizz" or "FinddonPanel", { title = "Finddon", logo = "Interface\\AddOns\\Finddon\\Media\\minimap",
+    options = "Finddon", hint = "/fd options", footer = true, store = ns.db.win,
+    width = blizz and BZ_W or WIN_W, height = blizz and BZ_H or WIN_H,
+    min = blizz and { 460, 340 } or { 420, 300 }, max = { 1000, 900 },
     onLayout = function(win, w, h) Place(win, w, h) end })
   W:Hide()
-  W.roles = Kit.List(W.body, { onClick = function(it, button)
+  W.roles = UI.List(W.body, { onClick = function(it, button)
     if not it.key then return end
     if button == "RightButton" then
       ns.db.favs[it.key] = not ns.db.favs[it.key] or nil
@@ -387,9 +397,10 @@ local function Build()
   W.line = CreateFrame("Frame", nil, W.body)
   W.line.tex = W.line:CreateTexture(nil, "ARTWORK")
   W.line.tex:SetAllPoints()
-  local d = Kit.C.divider
-  W.line.tex:SetColorTexture(d[1], d[2], d[3], 1)
-  W.search = Kit.SearchBox(W.body, { placeholder = L["Name, title or goods"], onChange = function(t)
+  -- the Don divider, in the game's look the white line of its column dividers
+  local d = blizz and { 1, 1, 1, 0.16 } or { Kit.C.divider[1], Kit.C.divider[2], Kit.C.divider[3], 1 }
+  W.line.tex:SetColorTexture(d[1], d[2], d[3], d[4])
+  W.search = UI.SearchBox(W.body, { placeholder = L["Name, title or goods"], onChange = function(t)
     local text = tostring(t or "")
     if text == state.text then return end
     state.text = text
@@ -397,22 +408,30 @@ local function Build()
   end })
   W.preview = CreateFrame("Frame", nil, W.body)
   if W.preview.SetFrameLevel and W.roles.GetFrameLevel then W.preview:SetFrameLevel((W.roles:GetFrameLevel() or 1) + 20) end
+  -- the preview covers the lower part of the role list: an opaque ground, the Don window's colour or, in the game's
+  -- look, nearly black under the game's ground of a list (DonCore Bz.Ground)
   W.preview.bg = W.preview:CreateTexture(nil, "BACKGROUND")
   W.preview.bg:SetAllPoints()
-  W.preview.bg:SetColorTexture(Kit.C.window[1], Kit.C.window[2], Kit.C.window[3], 1)
+  if blizz then
+    W.preview.bg:SetColorTexture(0.04, 0.04, 0.04, 1)
+    local Bz = select(3, ns.LookKit())
+    if Bz and Bz.Ground then W.preview.ground = Bz.Ground(W.preview, "item") end
+  else
+    W.preview.bg:SetColorTexture(Kit.C.window[1], Kit.C.window[2], Kit.C.window[3], 1)
+  end
   W.preview.line = W.preview:CreateTexture(nil, "ARTWORK")
   W.preview.line:SetPoint("TOPLEFT") W.preview.line:SetPoint("TOPRIGHT") W.preview.line:SetHeight(1)
-  W.preview.line:SetColorTexture(d[1], d[2], d[3], 1)
+  W.preview.line:SetColorTexture(d[1], d[2], d[3], d[4])
 
   W.preview.model = ns.NewModel(W.preview, false, true)
-  W.preview.name = Kit.Text(W.preview, "sub", Kit.C.title, "CENTER")
+  W.preview.name = UI.Text(W.preview, "sub", Kit.C.title, "CENTER")
   W.preview.name:SetPoint("BOTTOM", W.preview, "BOTTOM", 0, 5 + INFO_H)
-  W.preview.what = Kit.Text(W.preview, "sub", Kit.C.muted, "CENTER")
+  W.preview.what = UI.Text(W.preview, "sub", Kit.C.muted, "CENTER")
   W.preview.what:SetPoint("BOTTOM", W.preview, "BOTTOM", 0, 5 + INFO_H / 2)
-  W.preview.where = Kit.Text(W.preview, "sub", Kit.C.muted, "CENTER")
+  W.preview.where = UI.Text(W.preview, "sub", Kit.C.muted, "CENTER")
   W.preview.where:SetPoint("BOTTOM", W.preview, "BOTTOM", 0, 5)
   W.preview:Hide()
-  W.list = Kit.List(W.body, { kinds = { npc = { h = 36, make = MakeRow } }, onToggle = function(it)
+  W.list = UI.List(W.body, { kinds = { npc = { h = 36, make = MakeRow } }, onToggle = function(it)
     ns.db.closedHits[it.sec] = it.collapsed and true or nil
     Draw()
   end, onClick = function(it, button)
@@ -432,12 +451,40 @@ local function Build()
   W:Layout()
 end
 
+local said
+function ns.SayLook()
+  if said then return end
+  said = true
+  ns.Print(L["The search window could not be built in the game's look, it opens in the Don look. /fd diag says why."])
+end
+
+-- the option on and the client has the templates: Blizzard's blocks; else the Kit, quietly (the option is on by
+-- default, a client without the templates keeps the Don look without a word)
+local function PickUI()
+  local kit, blizz, _, note = ns.LookKit()
+  UI, lookNote = blizz and kit or Kit, note
+end
+
+local function Create()
+  PickUI()
+  if UI == Kit then Build() return end
+  -- Blizzard's blocks: any error while building leaves the half-built window hidden and the Kit builds it
+  local ok, err = pcall(Build)
+  if ok then return end
+  if W and W.Hide then pcall(W.Hide, W) end
+  W = nil
+  -- the reason stands in /fd diag (window look); one line in the chat per session
+  UI, lookNote = Kit, "kit (error: " .. tostring(err) .. ")"
+  ns.SayLook()
+  Build()
+end
+
 local function Ensure()
   if W then return true end
   if not Kit then ns.Print("DonCore Kit?") return false end
   local saved = ns.db.role
   state.role = saved ~= "" and ns.Role(saved) and saved or nil
-  Build()
+  Create()
   return true
 end
 
@@ -463,13 +510,27 @@ end
 function ns.ResetWindow()
   local st = ns.db.win
   st.point, st.relPoint, st.x, st.y, st.w, st.h = nil, nil, nil, nil, nil, nil
+  -- the Blizzard window's place and size (DonCore Blizz keeps them in store.bz, the window holds that table)
+  local bz = st.bz
+  if type(bz) == "table" then bz.point, bz.rel, bz.x, bz.y, bz.w, bz.h = nil, nil, nil, nil, nil, nil end
   if W then
     W:ClearAllPoints()
     W:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
-    W:SetSize(WIN_W, WIN_H)
+    if UI ~= Kit then W:SetSize(BZ_W, BZ_H) else W:SetSize(WIN_W, WIN_H) end
     W:Layout()
   end
 end
 
 -- (tests, diag) what the window shows
 function ns.WindowState() return state, W end
+function ns.WindowShown() return W ~= nil and W:IsShown() and true or false end
+-- "blizzard" or "kit", with the reason when the option is on and the Kit had to build (diag); nil before the first build
+function ns.WindowLook() return lookNote end
+-- the option blizzLook changed: the window is built again in the other look the next time it opens (it was open: now)
+function ns.WindowReset()
+  if not W then return end
+  local open = W:IsShown()
+  W:Hide()
+  W = nil
+  if open then ns.ToggleWindow() end
+end

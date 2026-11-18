@@ -12,6 +12,8 @@ L["arrow to the nearest hit, e.g. /fd go innkeeper"] = "стрелка к бли
 L["drop the arrow and the pin"] = "убрать стрелку и метку"
 L["open the options"] = "открыть настройки"
 L["show or hide the minimap button"] = "показать или скрыть кнопку у миникарты"
+L["report to copy (diag chat: in the chat)"] = "отчёт для копирования (diag chat: в чат)"
+L["Ctrl+A selects all, Ctrl+C copies."] = "Ctrl+A выделяет всё, Ctrl+C копирует."
 L["this list"] = "этот список"
 L["%s trainer"] = "Тренер: %s"
 L["Weapon master"] = "Мастер по оружию"
@@ -138,3 +140,8 @@ L["Bags"] = "Сумки"
 L["Sells"] = "Продаёт"
 L["limited supply"] = "ограниченный запас"
 L["+%d more"] = "ещё %d"
+
+-- (16.11.2026) the window in the game's look (option blizzLook)
+L["Windows in the game's look"] = "Окна в стиле игры"
+L["Finddon's search window looks like the game's own: the game's frame, buttons, search box and lists. The options then open in the game's settings (Options > AddOns > Finddon) after a /reload."] = "Окно поиска Finddon выглядит как окна самой игры: рамка, кнопки, поле поиска и списки игры. Настройки после /reload открываются в настройках игры (Настройки > Модификации > Finddon)."
+L["The search window could not be built in the game's look, it opens in the Don look. /fd diag says why."] = "Окно поиска не удалось построить в стиле игры, оно открывается в стиле Don. /fd diag покажет причину."

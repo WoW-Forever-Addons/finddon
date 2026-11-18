@@ -12,6 +12,8 @@ L["arrow to the nearest hit, e.g. /fd go innkeeper"] = "가장 가까운 결과�
 L["drop the arrow and the pin"] = "화살표와 핀 제거"
 L["open the options"] = "설정 열기"
 L["show or hide the minimap button"] = "미니맵 버튼 표시 또는 숨기기"
+L["report to copy (diag chat: in the chat)"] = "복사용 보고서 (diag chat: 채팅에 출력)"
+L["Ctrl+A selects all, Ctrl+C copies."] = "Ctrl+A 전체 선택, Ctrl+C 복사."
 L["this list"] = "이 목록"
 L["%s trainer"] = "%s 상급자"
 L["Weapon master"] = "무기 전문가"
@@ -138,3 +140,8 @@ L["Bags"] = "가방"
 L["Sells"] = "판매"
 L["limited supply"] = "수량 한정"
 L["+%d more"] = "외 %d개"
+
+-- (16.11.2026) the window in the game's look (option blizzLook)
+L["Windows in the game's look"] = "게임 스타일의 창"
+L["Finddon's search window looks like the game's own: the game's frame, buttons, search box and lists. The options then open in the game's settings (Options > AddOns > Finddon) after a /reload."] = "Finddon의 검색 창이 게임 자체의 창처럼 보입니다: 게임의 테두리, 버튼, 검색 상자, 목록을 사용합니다. 설정은 /reload 후 게임 설정(설정 > 애드온 > Finddon)에서 열립니다."
+L["The search window could not be built in the game's look, it opens in the Don look. /fd diag says why."] = "검색 창을 게임 스타일로 만들 수 없어 Don 스타일로 열립니다. /fd diag에서 이유를 볼 수 있습니다."
