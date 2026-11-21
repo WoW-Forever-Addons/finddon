@@ -1,5 +1,14 @@
 # Changes
 
+## 0.6.0
+
+- **What a profession trainer teaches:** every trainer row says what the NPC really teaches, for example "Skill 150-225, learnable from 125, level 20". Also Expert books at vendors, Artisan through quests (fishing, cooking, first aid) and specialisations.
+- **Special crafting places in dungeons:** the Black Anvil, the Black Forge, the alchemy lab and the Icebellow Anvil can be found; the arrow and the pin lead to the dungeon entrance.
+- **Transmog:** a new role under services finds the transmog NPCs in Stormwind, Orgrimmar and Dalaran in Alterac.
+- **Data of 21 November:** about 3,900 NPCs, more learned from play.
+- **One option for the window style:** the switch "Windows in the game's look" is now the choice "Window style" with "Don look" and "Blizzard look", named the same in every Don addon. Your setting stays as it was.
+- **Shared Don library:** updated to the current version of the Don addons.
+
 ## 0.5.0
 
 - **Finddon in the game's look:** the search window now has the game's own frame, buttons, search box and lists. The options open in the game's settings (Options > AddOns > Finddon). This is the new default; the Don look is one switch away under General, "Windows in the game's look".

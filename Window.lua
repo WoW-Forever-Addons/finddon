@@ -172,20 +172,30 @@ local function RoleItems()
   return items
 end
 
-local function Sub(npc, mapID, sold)
-  -- a hit by its goods says what it sells in the place of its title
-  local what = sold and ns.GoodsText(sold) or npc.title ~= "" and npc.title or ns.RoleText(npc)
+-- the profession letter of a role code ("Pb" -> "b"), nil for any other role
+local function ProfLetter(code)
+  return code and code:match("^P(%l)$") or nil
+end
+
+local function Sub(npc, mapID, sold, code)
+  -- a hit by its goods says what it sells in the place of its title; a profession NPC what it teaches (20.11.2026)
+  local letter = ProfLetter(code)
+  local what = sold and ns.GoodsText(sold) or letter and ns.TrainText(npc, letter)
+    or npc.title ~= "" and npc.title or ns.RoleText(npc)
   local zone = ns.ZoneName(mapID)
   if what ~= "" and zone ~= "" then return what .. " · " .. zone end
   return what ~= "" and what or zone
 end
 
-local function Tip(r)
+local function Tip(r, code)
   local npc = r.npc
   local lines = {}
   if npc.title ~= "" then lines[#lines + 1] = npc.title end
   local rt = ns.RoleText(npc)
   if rt ~= "" then lines[#lines + 1] = { L["Role"], rt } end
+  local letter = ProfLetter(code)
+  local train = letter and ns.TrainText(npc, letter)
+  if train then lines[#lines + 1] = { L["Teaches"], train } end
   if npc.level then lines[#lines + 1] = { L["Level"], (npc.level:gsub("%+", " " .. L["Elite"])) } end
   if r.goods then
     for i = 1, math.min(#r.goods, SOLD_MAX) do
@@ -224,9 +234,9 @@ local function ResultItems()
       local it = { kind = "npc", key = r.spot and (npc.id .. ":" .. r.spot) or npc.id, result = r, icon = role and role.icon or nil,
         title = npc.level and ("%s  |cff9ea3ad%s|r"):format(npc.name, npc.level) or npc.name,
         extra = not npc.place and ns.OtherRoles(npc, role and role.code) or nil,
-        sub = Sub(npc, r.mapID, r.goods), right = right, rightColor = color, rightWidth = MAP_X + MAP_W - 12,
+        sub = Sub(npc, r.mapID, r.goods, role and role.code), right = right, rightColor = color, rightWidth = MAP_X + MAP_W - 12,
         active = target ~= nil and target.npc == npc and (not r.spot or (target.x == r.x and target.y == r.y)) }
-      it.tooltipFn = function() return Tip(r) end
+      it.tooltipFn = function() return Tip(r, role and role.code) end
       it.onHover = function(_, on) if on then ns.Preview(npc, r) else PreviewLeave() end end
       items[#items + 1] = it
   end

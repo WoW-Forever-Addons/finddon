@@ -224,7 +224,7 @@ function ns.DiagLines()
     tostring(ns.LearnedCount and ns.LearnedCount() or 0),
     tostring(type(DonMapAPI) == "table" and DonMapAPI.version or "no"), tostring(ns.Target and ns.Target() and ns.Target().name or "none"))
   -- (16.11.2026) the window's look and why
-  lines[#lines + 1] = ("window look: option %s, built as %s, options %s"):format(ns.db and ns.db.blizzLook and "on" or "off",
+  lines[#lines + 1] = ("window style: %s, built as %s, options %s"):format(ns.db and ns.db.blizzLook and "Blizzard look" or "Don look",
     tostring(ns.WindowLook and ns.WindowLook() or "not built yet"), tostring(ns.OptionsLook and ns.OptionsLook() or "?"))
   for _, e in ipairs(errors) do lines[#lines + 1] = ("%dx [%s] %s"):format(e.count, e.context, e.msg) end
   if #errors == 0 then lines[#lines + 1] = L["No errors."] end

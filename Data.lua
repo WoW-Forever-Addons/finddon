@@ -3,10 +3,11 @@ local L = ns.L
 
 ---------------------------------------------------------------------------
 -- The NPC table. Data\NPCs.lua (tools/open/build_npcs.py) is one long string, a line per NPC:
---   id^name^title^side^roles^level^map:xxyy...[,map:xxyy...]^display   (display: the model for the NPC's picture, may be empty)
+--   id^name^title^side^roles^level^map:xxyy...[,map:xxyy...]^display^train   (display: the model for the NPC's picture,
+--   may be empty; train: what a profession NPC teaches, ns.TrainText)
 -- It is read on the first search (ns.NPCs()), not at login, and the string is dropped after that.
 -- Role codes: v vendor, r repair, g reagents, f food and drink, a ammunition, s stable master, t flight master,
--- k cooking fire, l mailbox, n anvil, j forge (places: one line per zone and kind with all its spots), i innkeeper, b banker, h auctioneer, m riding trainer, e pet trainer, w weapon master, x rare,
+-- k cooking fire, l mailbox, n anvil, j forge, u alchemy lab (places: one line per zone and kind with all its spots), i innkeeper, d transmog, b banker, h auctioneer, m riding trainer, e pet trainer, w weapon master, x rare,
 -- C<class ID in base 36> class trainer, P<letter> profession trainer, q quest NPC, o other NPC (to talk to, no service).
 -- G<letter> is no role in the data: a group of goods (Data\Goods.lua), the vendors that sell something of it.
 ---------------------------------------------------------------------------
@@ -16,7 +17,7 @@ local ICON = "Interface\\Icons\\"
 local TRACK = "Interface\\Minimap\\Tracking\\"
 -- places: the name in the data -> the text key (the kind of a cooking fire, Daniel 11.11.2026: "Art des Feuers")
 local PLACE_NAMES = { ["Cooking Fire"] = "Cooking fire", Campfire = "Campfire", Fireplace = "Fireplace", Brazier = "Brazier",
-  Stove = "Stove", Cauldron = "Cauldron", Mailbox = "Mailbox", Anvil = "Anvil", Forge = "Forge" }
+  Stove = "Stove", Cauldron = "Cauldron", Mailbox = "Mailbox", Anvil = "Anvil", Forge = "Forge", ["Alchemy Lab"] = "Alchemy lab" }
 local CLASSES = { -- class ID -> token (the trainers in the data), in the order of the list
   { 1, "WARRIOR", "ClassIcon_Warrior" }, { 2, "PALADIN", "ClassIcon_Paladin" }, { 3, "HUNTER", "ClassIcon_Hunter" },
   { 4, "ROGUE", "ClassIcon_Rogue" }, { 5, "PRIEST", "ClassIcon_Priest" }, { 7, "SHAMAN", "ClassIcon_Shaman" },
@@ -90,12 +91,16 @@ local function BuildRoles()
   Add("h", L["Auction house"], "Services", TRACK .. "Auctioneer", { "auction house", "auction", "auctioneer", "ah" })
   Add("t", L["Flight master"], "Services", TRACK .. "FlightMaster", { "flight master", "flight", "taxi" })
   Add("s", L["Stable master"], "Services", TRACK .. "StableMaster", { "stable master", "stable" })
+  -- (20.11.2026, Daniel: "kann man die transmog npcs auch mit finddon finden?") Forever's transmog NPCs
+  Add("d", L["Transmog"], "Services", "INV_Shirt_White_01", { "transmog", "transmogrification", "transmogrifier", "appearance" })
   -- (11.11.2026, Daniel: "plätze, an denen man kochen kann. da suche ich immer nach") places, not NPCs; the same day,
   -- chosen from the proposals: mailbox, anvil and forge on the same way, a group of their own
   Add("l", L["Mailbox"], "Places", TRACK .. "Mailbox", { "mailbox", "mail", "post" })
   Add("k", L["Cooking fire"], "Places", "Spell_Fire_Fire", { "cooking fire", "fire", "campfire", "cook", "stove" })
   Add("n", L["Anvil"], "Places", "INV_Hammer_20", { "anvil" })
   Add("j", L["Forge"], "Places", "Spell_Fire_FlameBlades", { "forge", "smelting", "smelt" })
+  -- (20.11.2026, Daniel: "Black Anvil kennt finddon nicht") the alchemy lab of the flasks, only inside an instance
+  Add("u", L["Alchemy lab"], "Places", "INV_Potion_62", { "alchemy lab", "lab", "flask" })
   -- (11.11.2026, Daniel: "Wieso nehmen wir da nicht alle npcs auf? ... Manchmal sucht man ja auch quest npcs") every NPC
   -- with a function is in the data: quest NPCs and the rest one can talk to, found by name or listed here
   Add("q", L["Quest NPCs"], "NPCs", "Interface\\GossipFrame\\AvailableQuestIcon", { "quest", "quests", "quest npc", "quest npcs", "quest giver" })
@@ -136,7 +141,7 @@ local function Parse()
   local data = ns.NPC_DATA
   if type(data) ~= "string" then return end
   for line in data:gmatch("[^\n]+") do
-    local id, name, title, side, rl, level, spots, display = line:match("^(%d+)%^([^%^]*)%^([^%^]*)%^(%a)%^([^%^]*)%^([^%^]*)%^([^%^]+)%^?(%d*)$")
+    local id, name, title, side, rl, level, spots, display, train = line:match("^(%d+)%^([^%^]*)%^([^%^]*)%^(%a)%^([^%^]*)%^([^%^]*)%^([^%^]+)%^?(%d*)%^?([^%^]*)$")
     if id then
       -- roles as " v r C1 Pa ": a plain find of " a " cannot hit the a of Pa
       local padded = " " .. rl:gsub("([CP]?[%l%d])", "%1 ")
@@ -144,9 +149,23 @@ local function Parse()
       -- ids from OBJECT_BASE on are places (the cooking fires, mailboxes, anvils or forges of one zone): the name in the
       -- game's language (a fire by its kind: campfire, stove ...), one pin
       local place = id >= ns.OBJECT_BASE
-      if place then name = L[PLACE_NAMES[name] or (rl == "k" and "Cooking fire") or name] end
+      local low = name .. "\n" .. title
+      if place then
+        name = L[PLACE_NAMES[name] or (rl == "k" and "Cooking fire") or name]
+        -- (20.11.2026) a place inside an instance (Black Anvil ...): title = the instance's English name, display = its
+        -- uiMapID; shown as "Inside <instance in the game's language>", its spots are the ways in; found by the English
+        -- words as well
+        if title ~= "" then
+          local m = tonumber(display)
+          local info = m and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(m)
+          title = L["Inside %s"]:format(type(info) == "table" and ns.Str(info.name) or title)
+          display = ""
+        end
+        low = low .. "\n" .. name .. "\n" .. title
+      end
       npcs[#npcs + 1] = { id = id, place = place or nil, name = name, title = title, side = side, roles = padded, first = rl:match("[CP]?[%l%d]"),
-        level = level ~= "" and level or nil, spots = spots, display = tonumber(display), low = (name .. "\n" .. title):lower() }
+        level = level ~= "" and level or nil, spots = spots, display = tonumber(display),
+        train = train ~= "" and train or nil, low = low:lower() }
     end
   end
   ns.NPC_DATA = nil -- the table replaces the string
@@ -375,4 +394,31 @@ function ns.RoleText(npc)
   end
   if #out == 0 and ns.HasRole(npc, "v") then out[1] = L["Vendor"] end
   return table.concat(out, ", ")
+end
+
+-- (20.11.2026, Daniel: "dass da zum Beispiel bei Artisanlehrer steht 150 bis Skill 225, ab 125 zu lernen") what a
+-- profession NPC teaches, from the ninth field of its line: per profession letter, rank (1 Apprentice 1-75, 2 Journeyman
+-- 75-150, 3 Expert 150-225, 4 Artisan 225-300, S specialization), how (t trainer, b book it sells, q quest it gives),
+-- skill and level needed to learn it. A trainer's title is one rank above what it teaches, so the title alone misleads.
+-- letter nil: the first profession the NPC teaches. nil when the data says nothing.
+function ns.TrainText(npc, letter)
+  if not (npc and npc.train) then return nil end
+  for l, rank, how, skill, level in npc.train:gmatch("(%l)([1-4S])(%l)(%d+):(%d+)") do
+    if not letter or l == letter then
+      local parts = {}
+      if rank == "S" then
+        parts[1] = L["Specialization"]
+      else
+        local r = tonumber(rank)
+        parts[1] = L["Skill %d-%d"]:format(r == 1 and 1 or (r - 1) * 75, r * 75)
+      end
+      skill, level = tonumber(skill), tonumber(level)
+      if skill > 0 then parts[#parts + 1] = L["learn at %d"]:format(skill) end
+      if level > 0 then parts[#parts + 1] = L["level %d"]:format(level) end
+      local s = table.concat(parts, ", ")
+      if how == "b" then s = L["Book: %s"]:format(s) elseif how == "q" then s = L["Quest: %s"]:format(s) end
+      return s
+    end
+  end
+  return nil
 end

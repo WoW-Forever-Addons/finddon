@@ -142,6 +142,18 @@ L["limited supply"] = "existencias limitadas"
 L["+%d more"] = "+%d más"
 
 -- (16.11.2026) the window in the game's look (option blizzLook)
-L["Windows in the game's look"] = "Ventanas con el aspecto del juego"
-L["Finddon's search window looks like the game's own: the game's frame, buttons, search box and lists. The options then open in the game's settings (Options > AddOns > Finddon) after a /reload."] = "La ventana de búsqueda de Finddon se ve como las del juego: el marco, los botones, el campo de búsqueda y las listas del juego. Las opciones se abren entonces en los ajustes del juego (Opciones > AddOns > Finddon) tras un /reload."
 L["The search window could not be built in the game's look, it opens in the Don look. /fd diag says why."] = "La ventana de búsqueda no se pudo construir con el aspecto del juego, se abre con el aspecto Don. /fd diag indica por qué."
+
+-- (20.11.2026) what a profession trainer teaches (ns.TrainText)
+L["Skill %d-%d"] = "Habilidad %d-%d"
+L["learn at %d"] = "desde %d"
+L["level %d"] = "nivel %d"
+L["Specialization"] = "Especialización"
+L["Book: %s"] = "Libro: %s"
+L["Quest: %s"] = "Misión: %s"
+L["Teaches"] = "Enseña"
+-- (20.11.2026) places inside an instance (Black Anvil, Black Forge, Alchemy Lab, Icebellow Anvil)
+L["Alchemy lab"] = "Laboratorio de alquimia"
+L["Inside %s"] = "Dentro de %s"
+-- (20.11.2026) transmog NPCs
+L["Transmog"] = "Transfiguración"

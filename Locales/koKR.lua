@@ -142,6 +142,18 @@ L["limited supply"] = "수량 한정"
 L["+%d more"] = "외 %d개"
 
 -- (16.11.2026) the window in the game's look (option blizzLook)
-L["Windows in the game's look"] = "게임 스타일의 창"
-L["Finddon's search window looks like the game's own: the game's frame, buttons, search box and lists. The options then open in the game's settings (Options > AddOns > Finddon) after a /reload."] = "Finddon의 검색 창이 게임 자체의 창처럼 보입니다: 게임의 테두리, 버튼, 검색 상자, 목록을 사용합니다. 설정은 /reload 후 게임 설정(설정 > 애드온 > Finddon)에서 열립니다."
 L["The search window could not be built in the game's look, it opens in the Don look. /fd diag says why."] = "검색 창을 게임 스타일로 만들 수 없어 Don 스타일로 열립니다. /fd diag에서 이유를 볼 수 있습니다."
+
+-- (20.11.2026) what a profession trainer teaches (ns.TrainText)
+L["Skill %d-%d"] = "숙련도 %d-%d"
+L["learn at %d"] = "%d부터 습득"
+L["level %d"] = "레벨 %d"
+L["Specialization"] = "전문화"
+L["Book: %s"] = "책: %s"
+L["Quest: %s"] = "퀘스트: %s"
+L["Teaches"] = "가르침"
+-- (20.11.2026) places inside an instance (Black Anvil, Black Forge, Alchemy Lab, Icebellow Anvil)
+L["Alchemy lab"] = "연금술 실험실"
+L["Inside %s"] = "%s 내부"
+-- (20.11.2026) transmog NPCs
+L["Transmog"] = "형상변환"

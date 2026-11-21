@@ -22,8 +22,9 @@ local PAGES = {
       onChange = function() if ns.ApplyPictures then ns.ApplyPictures() end end },
     -- (16.11.2026, Daniel: Blizzard look for all Don addons, on by default) the search window from the game's own
     -- templates (DonCore Blizz); a change builds the window again, the options follow after a /reload
-    { key = "blizzLook", name = "Windows in the game's look", tip = "Finddon's search window looks like the game's own: the game's frame, buttons, search box and lists. The options then open in the game's settings (Options > AddOns > Finddon) after a /reload.",
-      onChange = function() if ns.WindowReset then ns.WindowReset() end end },
+    -- (20.11.2026, Daniel: the same option in every Don addon) the choice "Window style" with "Don look" and
+    -- "Blizzard look" from DonCore (Settings minor 6, ns.LookOption: name, entries and tooltip in the game's language)
+    ns.LookOption({ addon = "Finddon", onChange = function() if ns.WindowReset then ns.WindowReset() end end }),
     { key = "otherSide", name = "Show the other faction", tip = "Also lists NPCs that only serve the other faction.", onChange = Rerun },
     ns.MinimapOption(),
     { kind = "button", name = "Drop arrow and pin", button = "Drop", tip = "Takes Finddon's target off the arrow and the maps. /fd clear",
@@ -59,7 +60,7 @@ end
 local fullPages = false
 local function Build()
   local spec = { name = "Finddon", status = Status, tools = TOOLS, pages = PAGES, help = Help,
-    -- (16.11.2026, DonCore Options 6) with the option blizzLook every cog and /fd options ends in the game's settings
+    -- (16.11.2026, DonCore Options 6) with the Blizzard look (option blizzLook, "Window style") every cog and /fd options ends in the game's settings
     redirect = function() return ns.OpenGameOptions and ns.OpenGameOptions() or false end }
   -- (16.11.2026, DonCore Settings 3) the game's look: the full pages in the game's settings although DonCore's window
   -- is there (only where the client has the templates: without them the window is Don's and so is the options window)
