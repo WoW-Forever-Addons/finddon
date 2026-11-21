@@ -1,5 +1,9 @@
 # Changes
 
+## 0.6.2
+
+- **Data of 21 November:** NPC data refreshed with the recordings of more players.
+
 ## 0.6.1
 
 - **Smoother first vendor visit:** the vendor and NPC data are read a few seconds after login instead of at the first vendor, and an unchanged vendor list is not stored again.

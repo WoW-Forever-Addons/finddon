@@ -16,7 +16,7 @@ ns.NPC_DATA = [==[
 54^Corina Steele^Weaponsmith^A^vr^^1429:bkia^1287^
 61^Thuros Lightfingers^^N^x^11^1429:engd7ygn84g48kfve1n1ozm3^3341^
 66^Tharynn Bouden^Trade Supplies^A^v^^1429:blim^1298^
-68^Stormwind City Guard^^A^o^^1453:ekjrhojw^3167^
+68^Stormwind City Guard^^A^o^^1453:ekjrhojwfyk6^3167^
 74^Kurran Steele^Cloth & Leather Armor Merchant^A^vr^^1429:bii8^1289^
 78^Janos Hammerknuckle^Weaponsmith^A^vr^^1429:d5bn^3275^
 79^Narg the Taskmaster^^N^x^10^1429:bdlj^774^
@@ -421,7 +421,7 @@ ns.NPC_DATA = [==[
 1443^Fel'zerul^^H^q^^1435:dbf8^4554^
 1444^Brother Kristoff^^A^q^^1453:faf2^5549^
 1448^Neal Allen^Engineering & General Goods Supplier^A^vfaq^^1437:2zfs^3459^
-1449^Witch Doctor Unbagwa^^N^q^^1434:9tgs^4661^
+1449^Witch Doctor Unbagwa^^N^q^^1434:9sgt^4661^
 1450^Brahnmar^Armorer^A^vr^^1437:36gk^3474^
 1451^Camerick Jongleur^Wandering Minstrel^A^q^^1437:2rgf^3462^
 1452^Gruham Rumdnul^General Supplies^A^vfaq^^1437:3cg3^3476^
@@ -714,23 +714,23 @@ ns.NPC_DATA = [==[
 2482^Zarena Cromwind^Superior Weaponsmith^N^vr^^1434:7wky^4490^
 2483^Jaquilina Dramet^Superior Axecrafter^N^vr^^1434:9x2z^4394^
 2485^Larimaine Purdue^Portal Trainer^A^C8^^1453:dzny^1470^
-2486^Fin Fizracket^Blackwater Raiders^N^q^^1434:7olb^7162^
-2487^Fleet Master Seahorn^Blackwater Raiders^N^q^^1434:7kle^1667^
-2488^Deeg^Blackwater Raiders^N^q^^1434:7hlh^1282^
+2486^Fin Fizracket^Blackwater Raiders^N^q^^1434:7plb^7162^
+2487^Fleet Master Seahorn^Blackwater Raiders^N^q^^1434:7jle^1667^
+2488^Deeg^Blackwater Raiders^N^q^^1434:7hli^1282^
 2489^Milstaff Stormeye^Portal Trainer^A^C8q^^1455:7121^10548^
 2490^First Mate Crazz^Blackwater Raiders^N^q^^1434:7tl7^7165^
-2491^Whiskey Slim^Blackwater Raiders^N^q^^1434:7jli^4717^
+2491^Whiskey Slim^Blackwater Raiders^N^q^^1434:7jlj^4717^
 2492^Lexington Mortaim^Portal Trainer^H^C8q^^1458:ng4h^2810^
-2493^Dizzy One-Eye^Blackwater Raiders^N^q^^1434:7yl3^1403^
+2493^Dizzy One-Eye^Blackwater Raiders^N^q^^1434:7xl3^1403^
 2494^Privateer Bloads^^N^q^^1434:7fl8^1928^
 2495^Drizzlik^^N^q^^1434:7vlj^7166^
 2496^Baron Revilgaz^^N^q^^1434:7kld^7167^
 2497^Nimboya^^H^q^^1434:8y7p^4569^
 2498^Crank Fizzlebub^^N^q^^1434:7jlh^7168^
 2499^Markel Smythe^^N^q^^1434:7skt^7429^
-2500^Captain Hecklebury Smotts^^N^q^^1434:7fkg^797^
+2500^Captain Hecklebury Smotts^^N^q^^1434:7fkh^797^
 2501^"Sea Wolf" MacKinley^^N^q^^1434:7qlf^1925^
-2502^"Shaky" Phillipe^^N^q^^1434:7hkg^1929^
+2502^"Shaky" Phillipe^^N^q^^1434:7hkh^1929^
 2504^Donyal Tovald^Librarian^A^q^^1453:kv8f^1573^
 2506^Mountaineer Harn^^A^q^^1432:a4e1^1790^
 2507^Mountaineer Uthan^^A^q^^1432:akbk^1808^
@@ -754,7 +754,7 @@ ns.NPC_DATA = [==[
 2530^Yenniku^Darkspear Hostage^H^q^^1434:aug7^4663^
 2541^Lord Sakrasis^^N^x^45^1434:7vhe^4910^
 2542^Catelyn the Blade^Blackwater Raiders^N^q^^1434:7llj^1546^
-2543^Archmage Ansirem Runeweaver^Kirin Tor^A^q^^1421:l5g7^1595^
+2543^Archmage Ansirem Runeweaver^Kirin Tor^A^q^^1416:3zgn^1595^
 2545^"Pretty Boy" Duncan^^N^q^^1434:7mja^4641^
 2546^Fleet Master Firallon^^N^q^^1434:8ip6^797^
 2594^Sprogger^^N^q^^1434:7fkg^7212^
@@ -789,7 +789,7 @@ ns.NPC_DATA = [==[
 2683^Namdo Bizzfizzle^Engineering Supplies^A^vq^^1426:638v^4953^
 2684^Rizz Loosebolt^Engineering Supplies^N^vq^^1416:d59s^3733^
 2685^Mazk Snipeshot^Engineering Supplies^N^va^^1434:7wkv^7179^
-2687^Gnaz Blunderflame^Engineering Supplies^N^vq^^1434:e69s^4493^
+2687^Gnaz Blunderflame^Engineering Supplies^N^vq^^1434:e79x^4493^
 2688^Ruppo Zipcoil^Engineering Supplies^N^vq^^1425:9jai^6545^
 2695^Sara Balloo^^A^q^^1455:htir^1670^
 2696^Foggy MacKreel^^A^q^^1437:do24^1668^
@@ -882,7 +882,7 @@ ns.NPC_DATA = [==[
 2911^Archaeologist Flagongut^Explorers' League^A^q^^1437:30gs^1650^
 2912^Chief Archaeologist Greywhisker^Explorers' League^A^q^^1457:8nnf^1665^
 2913^Archaeologist Hollee^Explorers' League^A^q^^1439:afbm^1286^
-2916^Historian Karnik^^A^q^^1455:lj3a^3595^
+2916^Historian Karnik^^A^q^^1455:lf3a^3595^
 2917^Prospector Remtravel^Explorers' League^A^q^^1439:9yn9^1277^
 2918^Advisor Belgrum^^A^q^^1455:lh2p^3598^
 2920^Lucien Tosselwrench^^N^q^^1418:76ca^4895^
@@ -1601,7 +1601,7 @@ ns.NPC_DATA = [==[
 4615^Katrina Alliestar^Herbalism Supplier^H^vq^^1458:f7ds^2665^
 4616^Lavinia Crowe^Expert Enchanter^H^Pe^^1458:hah4^12955^e2t50:10
 4617^Thaddeus Webb^Enchanting Supplies^H^vq^^1458:h9gv^2651^
-4618^Martek the Exiled^^N^q^^1418:bqen^4898^
+4618^Martek the Exiled^^N^q^^1418:brel^4898^
 4629^Trackmaster Zherin^^N^q^^1441:molm^2704^
 4630^Pozzik^^N^q^^1441:m9l3^7199^
 4631^Wharfmaster Lozgil^^N^q^^1434:7bkf^7106^
@@ -1682,7 +1682,7 @@ ns.NPC_DATA = [==[
 5082^Vincent Hyal^^A^q^^1437:30gs^3011^
 5083^Clerk Lendry^^A^q^^1445:ivde^3014^
 5087^Do'gol^^H^q^^1445:a58k^655^
-5089^Balos Jacken^^A^q^^1445:a1f3^3017^
+5089^Balos Jacken^^A^q^^1445:a1f2^3017^
 5099^Soleil Stonemantle^Banker^A^b^^1455:a8h7^3039^
 5100^Fillius Fizzlespinner^Trade Supplier^A^v^^1455:apkk^3040^
 5101^Bryllia Ironbrand^General Goods Vendor^A^vfa^^1455:arkl^3041^
@@ -2065,7 +2065,7 @@ ns.NPC_DATA = [==[
 6496^Brivelthwerp^Ice Cream Vendor^N^vfq^^1441:lile^5451^
 6497^Astor Hadren^^H^o^^1421:dt8y^5237^
 6522^Andron Gant^^H^q^^1458:f8l7^5346^
-6546^Tabetha^^N^q^^1445:ctfv^5375^
+6546^Tabetha^^N^q^^1445:csfw^5375^
 6548^Magus Tirth^^N^vq^^1441:lrl2^5374^
 6566^Estelle Gendry^^H^o^^1458:lql7^10732^
 6567^Ghok'kah^Tailoring Supplies^H^vq^^1445:9s8k^5368^
@@ -2213,7 +2213,7 @@ ns.NPC_DATA = [==[
 7798^Hank the Hammer^The Mithril Order^A^q^^1453:hha8^6844^
 7799^Gimblethorn^Banker^N^b^^1446:ej81^6882^
 7801^Gilveradin Sunchaser^^N^q^^1425:7fdi^6994^
-7802^Galvan the Ancient^Artisan Blacksmith of the Mithril Order^N^q^^1434:e25p^6846^
+7802^Galvan the Ancient^Artisan Blacksmith of the Mithril Order^N^q^^1434:e35p^6846^
 7804^Trenton Lighthammer^The Mithril Order^N^q^^1446:eb7z^6868^
 7806^Homing Robot OOX-09/HL^^N^q^^1425:dqah^6909^
 7807^Homing Robot OOX-22/FE^^N^q^^1444:eufh^6909^
@@ -2405,7 +2405,7 @@ ns.NPC_DATA = [==[
 8673^Auctioneer Thathung^^H^h^^1454:fjhf^8001^
 8674^Auctioneer Stampi^^H^h^^1456:b8ee^7999^
 8678^Jubie Gadgetspring^Engineering Supplier^N^vq^^1447:clp9^7969^
-8679^Knaz Blunderflame^Engineering Supplies^N^vq^^1434:e79s^7952^
+8679^Knaz Blunderflame^Engineering Supplies^N^vq^^1434:e49y^7952^
 8681^Outfitter Eric^Speciality Tailoring Supplies^A^v^^1455:c085^7951^
 8719^Auctioneer Fitch^^A^h^^1453:h0jt^7992^
 8720^Auctioneer Redmuse^^A^h^^1455:6qkr^7989^
@@ -2949,7 +2949,7 @@ ns.NPC_DATA = [==[
 12866^Myriam Moonsinger^^N^q^^1441:c27x^12964^
 12867^Kuray'bin^^H^q^^1440:jrix^12956^
 12877^Ertog Ragetusk^^H^q^^1440:kahd^12790^
-12919^Nat Pagle^^N^vPiq^^1445:gagp^13099^i4q225:35
+12919^Nat Pagle^^N^vPiq^^1445:gagn^13099^i4q225:35
 12920^Doctor Gregory Victor^Trauma Surgeon^H^Pfq^^1417:kea9^12928^f4q225:35
 12939^Doctor Gustaf VanHowzen^Trauma Surgeon^A^Pfq^^1445:iudm^12930^f4q225:35
 12941^Jase Farlane^Trade Supplies^N^vq^^1423:jpdd^12954^
