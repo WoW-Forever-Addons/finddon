@@ -256,7 +256,8 @@ local function LoadNames()
   Step()
 end
 
-local function ParseGoods()
+local namesLater -- (21.11.2026, Ruckler) parsed ahead after login: the names start on the first real use, as before
+local function ParseGoods(ahead)
   goods, goodById = {}, {}
   local data = ns.GOODS_DATA
   if type(data) == "string" then
@@ -271,16 +272,24 @@ local function ParseGoods()
     ns.GOODS_DATA = nil
   end
   table.sort(goods, function(a, b) if a.name ~= b.name then return a.name < b.name end return a.id < b.id end)
+  if ahead then namesLater = true return end
+  namesLater = nil
   LoadNames()
 end
 
 function ns.Goods()
-  if not goods then ParseGoods() end
+  if not goods then ParseGoods()
+  elseif namesLater then namesLater = nil LoadNames() end
   return goods
 end
 
+-- (21.11.2026, Ruckler) the goods (129 KB) and the NPCs (205 KB) were parsed at the first vendor of a session (a hitch
+-- there): Learn.lua parses them ahead a few seconds after login, out of combat, one per call
+function ns.ParseGoodsAhead() if not goods then ParseGoods(true) end end
+function ns.ParseNPCsAhead() ns.NPCByID(0) end
+
 -- (tests) another goods string: read at the next search
-function ns.SetGoodsData(data) ns.GOODS_DATA, goods, goodById = data, nil, nil end
+function ns.SetGoodsData(data) ns.GOODS_DATA, goods, goodById, namesLater = data, nil, nil, nil end
 
 -- whether the shipped data knows the item
 function ns.KnownGood(id)

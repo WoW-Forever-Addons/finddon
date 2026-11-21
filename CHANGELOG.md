@@ -1,5 +1,9 @@
 # Changes
 
+## 0.6.1
+
+- **Smoother first vendor visit:** the vendor and NPC data are read a few seconds after login instead of at the first vendor, and an unchanged vendor list is not stored again.
+
 ## 0.6.0
 
 - **What a profession trainer teaches:** every trainer row says what the NPC really teaches, for example "Skill 150-225, learnable from 125, level 20". Also Expert books at vendors, Artisan through quests (fishing, cooking, first aid) and specialisations.
