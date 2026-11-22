@@ -252,7 +252,9 @@ local function LoadNames()
       ns.After(NAMES_AGAIN, Step)
     else
       namesRunning = false
-      if got and ns.RefreshWindow then ns.RefreshWindow() end
+      -- (22.11.2026) the search again, not only the rows: the open list no longer searches anew while the player
+      -- moves (Window.lua Follow), and a name in the game's language may be a new hit
+      if got and ns.SearchAgain then ns.SearchAgain() end
     end
   end
   Step()

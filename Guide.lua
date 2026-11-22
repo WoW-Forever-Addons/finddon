@@ -97,7 +97,8 @@ function ns.ClearTarget()
   local api = ns.Map()
   if api then pcall(api.SetArrowTarget, "finddon", nil) end
   if src then src:Clear() end
-  if had and ns.RefreshWindow then ns.RefreshWindow() end
+  -- (22.11.2026, Ruckler, DonMonitor report: timer Guide.lua:162 avg 30 ms) only the hits' mark and the footer
+  if had and ns.RefreshTarget then ns.RefreshTarget() end
 end
 
 -- the arrow still shows our target (or the way to the corpse, which comes first for a while)
@@ -161,7 +162,7 @@ function ns.SetTarget(result)
     ticking = true
     ns.After(TICK, Tick)
   end
-  if ns.RefreshWindow then ns.RefreshWindow() end
+  if ns.RefreshTarget then ns.RefreshTarget() end
   return true
 end
 

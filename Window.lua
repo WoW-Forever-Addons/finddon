@@ -76,6 +76,15 @@ local function PreviewLeave()
   end)
 end
 
+-- (proposal 3) what stands on the right of a hit: the distance in a colour by nearness; on another continent that
+-- continent's name in its place
+local function Right(r)
+  local d = r.dist
+  if d then return ns.DistText(d), d < NEAR and Kit.C.green or d < MID and Kit.C.yellow or nil end
+  if state.note ~= "nopos" then return ns.ContinentName(r.mapID), Kit.C.quiet end
+  return "", nil
+end
+
 -- a hit row with the NPC's picture over its role symbol (list kind "npc")
 local function MakeRow(parent)
   local r = UI.ListRow(parent)
@@ -130,6 +139,9 @@ local function MakeRow(parent)
   end
   local set = r.SetItem
   r.SetItem = function(self, it, ...)
+    -- (22.11.2026) the distance as it is now, whenever a row is drawn: the items of rows out of sight are not touched
+    -- while the list follows the player (Follow)
+    if it and it.result then it.right, it.rightColor = Right(it.result) end
     set(self, it, ...)
     local npc = it and it.result and it.result.npc
     ns.ShowModel(self.model, npc and not npc.place and npc or nil)
@@ -215,29 +227,43 @@ local function Tip(r, code)
   return npc.name, lines, L["Click: arrow and pin. Right click: drop them."]
 end
 
-local function ResultItems()
+-- (22.11.2026, Ruckler, DonMonitor: 18 frames over 50 ms, about 1 MB of garbage per search with some hundred hits) the
+-- parts of a hit's item only the rows on screen ask for are made when they are asked for: the line under the name,
+-- the other roles' symbols, the tooltip and the hover. Before, every hit of a search got them at once.
+local LAZY = { __index = function(it, k)
+  if k ~= "sub" and k ~= "extra" and k ~= "tooltipFn" and k ~= "onHover" then return nil end
+  local r, code = rawget(it, "result"), rawget(it, "code")
+  if not r then return nil end
+  local npc, v = r.npc, nil
+  if k == "sub" then v = Sub(npc, r.mapID, r.goods, code)
+  elseif k == "extra" then v = not npc.place and ns.OtherRoles(npc, code) or false
+  elseif k == "tooltipFn" then v = function() return Tip(r, code) end
+  else v = function(_, on) if on then ns.Preview(npc, r) else PreviewLeave() end end end
+  rawset(it, k, v)
+  return v
+end }
+
+-- keep = true (22.11.2026): the hits are the same as at the last draw (only the position or the arrow changed), every
+-- hit keeps its item (r.item); a new search makes new hits and so new items
+local function ResultItems(keep)
   local items, target = {}, ns.Target()
   -- (11.11.2026, proposal 4) the list in parts: this zone, neighbouring zones, further away; a click on a head folds
   -- its part (FinddonDB.closedHits). Without a position the hits have no part and the list has no heads.
   local counts, sec = {}, nil
   for _, r in ipairs(state.results) do if r.sec then counts[r.sec] = (counts[r.sec] or 0) + 1 end end
+  local chosen = ns.Role(state.role or "")
   local function Row(r, own)
       local npc = r.npc
-      local role = not own and ns.Role(state.role or "") or ns.Role(npc.first)
-      -- (proposal 3) the distance in a colour by nearness; on another continent that continent's name in its place
-      local right, color = ns.DistText(r.dist), nil
-      if r.dist then
-        color = r.dist < NEAR and Kit.C.green or r.dist < MID and Kit.C.yellow or nil
-      elseif state.note ~= "nopos" then
-        right, color = ns.ContinentName(r.mapID), Kit.C.quiet
+      local it = keep and r.item or nil
+      if not it then
+        local role = not own and chosen or ns.Role(npc.first)
+        it = setmetatable({ kind = "npc", key = r.spot and (npc.id .. ":" .. r.spot) or npc.id, result = r, icon = role and role.icon or nil,
+          title = npc.level and ("%s  |cff9ea3ad%s|r"):format(npc.name, npc.level) or npc.name,
+          code = role and role.code or nil, rightWidth = MAP_X + MAP_W - 12 }, LAZY)
+        it.right, it.rightColor = Right(r)
+        r.item = it
       end
-      local it = { kind = "npc", key = r.spot and (npc.id .. ":" .. r.spot) or npc.id, result = r, icon = role and role.icon or nil,
-        title = npc.level and ("%s  |cff9ea3ad%s|r"):format(npc.name, npc.level) or npc.name,
-        extra = not npc.place and ns.OtherRoles(npc, role and role.code) or nil,
-        sub = Sub(npc, r.mapID, r.goods, role and role.code), right = right, rightColor = color, rightWidth = MAP_X + MAP_W - 12,
-        active = target ~= nil and target.npc == npc and (not r.spot or (target.x == r.x and target.y == r.y)) }
-      it.tooltipFn = function() return Tip(r, role and role.code) end
-      it.onHover = function(_, on) if on then ns.Preview(npc, r) else PreviewLeave() end end
+      it.active = target ~= nil and target.npc == npc and (not r.spot or (target.x == r.x and target.y == r.y))
       items[#items + 1] = it
   end
   for _, r in ipairs(state.results) do
@@ -284,14 +310,36 @@ local function Status()
   end
 end
 
-local function Draw(reset)
+-- keep = true (22.11.2026): only the hits again, with their items kept (the position or the arrow changed); the
+-- roles, the subtitle and the empty text stay as they are
+local function Draw(reset, keep)
   if not (W and W.built) then return end
-  W.roles:SetItems(RoleItems())
-  W.list:SetEmpty((state.role or state.text ~= "") and L["Nothing found."] or L["Choose a role or type a name or goods."])
-  W.list:SetItems(ResultItems(), reset)
-  local role = ns.Role(state.role or "")
-  W:SetSubtitle(role and role.label or "")
+  if not keep then
+    W.roles:SetItems(RoleItems())
+    -- (22.11.2026) SetEmpty draws the list: only when the text changes (the hits were drawn twice with every search)
+    local empty = (state.role or state.text ~= "") and L["Nothing found."] or L["Choose a role or type a name or goods."]
+    if W.list.emptyText ~= empty then W.list:SetEmpty(empty) end
+  end
+  W.list:SetItems(ResultItems(keep), reset)
+  if not keep then
+    -- (22.11.2026) the subtitle lays the window out anew, which draws both lists once more: only when it changes
+    local role = ns.Role(state.role or "")
+    local sub = role and role.label or ""
+    if W.subShown ~= sub then
+      W.subShown = sub
+      W:SetSubtitle(sub)
+    end
+  end
   Status()
+end
+
+-- the order of the "other roles": nearest first, no parts
+local function OtherBefore(a, b)
+  if a.dist and b.dist then if a.dist ~= b.dist then return a.dist < b.dist end
+  elseif a.dist or b.dist then return a.dist ~= nil end
+  if a.npc.name ~= b.npc.name then return a.npc.name < b.npc.name end
+  if a.npc.id ~= b.npc.id then return a.npc.id < b.npc.id end
+  return (a.spot or 0) < (b.spot or 0)
 end
 
 local function Run(reset)
@@ -307,13 +355,7 @@ local function Run(reset)
         state.others[#state.others + 1] = r
       end
     end
-    table.sort(state.others, function(a, b)
-      if a.dist and b.dist then if a.dist ~= b.dist then return a.dist < b.dist end
-      elseif a.dist or b.dist then return a.dist ~= nil end
-      if a.npc.name ~= b.npc.name then return a.npc.name < b.npc.name end
-      if a.npc.id ~= b.npc.id then return a.npc.id < b.npc.id end
-      return (a.spot or 0) < (b.spot or 0)
-    end)
+    table.sort(state.others, OtherBefore)
   end
   local api = ns.Map()
   if api then
@@ -323,9 +365,19 @@ local function Run(reset)
   Draw(reset)
 end
 ns.RunSearch = function() Run(true) end
+-- the same search again without going back to the top (the goods' names in the game's language arrived, Data.lua)
+function ns.SearchAgain()
+  if W and W:IsShown() then Run() end
+end
 
 function ns.RefreshWindow()
   if W and W:IsShown() then Draw() end
+end
+
+-- (22.11.2026, Ruckler, DonMonitor report: timer Guide.lua:162 avg 30 ms: the arrow dropped on arrival drew both
+-- lists anew with every item made again) the arrow was set or dropped: only the hits' mark and the footer
+function ns.RefreshTarget()
+  if W and W:IsShown() then Draw(nil, true) end
 end
 
 -- the option "pictures" changed: rows and the preview again
@@ -336,19 +388,64 @@ function ns.ApplyPictures()
   if W:IsShown() then Draw() end
 end
 
+-- (22.11.2026, Ruckler, DonMonitor report: timer Window.lua:458, 11 calls in under a minute, avg 58.6 ms, max 69.3 ms:
+-- on a mount the whole search, every item and both lists ran again every 2 s) The player moved, the search is the
+-- same: the kept hits get their distance from here and are put in order (ns.Resort). The order, the parts and the
+-- places held: the rows on screen get their new yards, nothing is drawn. Else the hits are drawn with their items kept.
+local function Follow(c, n, w)
+  local note, changed = ns.Resort(state.results)
+  local _, more = ns.Resort(state.others, true, OtherBefore)
+  state.at = { c, n, w }
+  if not (changed or more) and note == state.note then
+    for _, row in ipairs(W.list:Rows()) do
+      local it = row.item
+      local r = it and it.result
+      if r then
+        local right, color = Right(r)
+        if color ~= it.rightColor or not (row.right and row.right.SetText) then changed = true break end
+        if right ~= it.right then
+          it.right = right
+          row.right:SetText(right)
+        end
+      end
+    end
+    if not changed then return false end
+  end
+  state.note = note
+  Draw(nil, true)
+  return true
+end
+
 -- while the window is open the list follows the player: sorted anew once he moved MOVED yards
 local watching
 local function Watch()
   watching = false
   if not (W and W:IsShown()) then return end
   local api = ns.Map()
-  if api and (state.role or state.text ~= "") then
+  -- (22.11.2026) not while the mouse is on the hits: a row must not move away under the cursor; the list catches up
+  -- at the first pass after the mouse left
+  if api and (state.role or state.text ~= "") and not (W.list.IsMouseOver and W.list:IsMouseOver()) then
     local c, n, w = api.PlayerWorld()
     local at = state.at
-    if c and (not at or at[1] ~= c or math.abs(at[2] - n) + math.abs(at[3] - w) > MOVED) then Run() end
+    if c and (not at or at[1] ~= c or math.abs(at[2] - n) + math.abs(at[3] - w) > MOVED) then Follow(c, n, w) end
   end
   watching = true
   ns.After(2, Watch)
+end
+-- (tests) one pass of the list following the player, without the timer; true when the hits were drawn
+function ns.FollowNow()
+  local api = ns.Map()
+  if not (W and W:IsShown() and api) then return nil end
+  local c, n, w = api.PlayerWorld()
+  if not c then return nil end
+  return Follow(c, n, w)
+end
+
+-- (22.11.2026) a list's Resize draws its rows: only when the size changes (every layout of the window drew both lists)
+local function Size(list, w, h)
+  if list.sizedW == w and list.sizedH == h then return end
+  list.sizedW, list.sizedH = w, h
+  list:Resize(w, h)
 end
 
 local function Place(win, w, h)
@@ -356,7 +453,7 @@ local function Place(win, w, h)
   local rw = w < NARROW and ROLE_W_NARROW or ROLE_W
   win.roles:ClearAllPoints()
   win.roles:SetPoint("TOPLEFT", win.body, "TOPLEFT", 0, 0)
-  win.roles:Resize(rw, h)
+  Size(win.roles, rw, h)
   local ph = rw + NAME_H + INFO_H
   win.previewRoom = h >= PREVIEW_MIN_H
   if not win.previewRoom then win.preview:Hide() end
@@ -379,7 +476,7 @@ local function Place(win, w, h)
   win.search:Layout(math.max(60, w - rw - 1 - 2 * GAP))
   win.list:ClearAllPoints()
   win.list:SetPoint("TOPLEFT", win.body, "TOPLEFT", rw + 1, -(SEARCH_H + 2 * GAP))
-  win.list:Resize(math.max(60, w - rw - 1), math.max(20, h - SEARCH_H - 2 * GAP))
+  Size(win.list, math.max(60, w - rw - 1), math.max(20, h - SEARCH_H - 2 * GAP))
 end
 
 local function Build()

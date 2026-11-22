@@ -108,6 +108,57 @@ local function Before(a, b)
   return (a.spot or 0) < (b.spot or 0)
 end
 
+-- (22.11.2026, Ruckler, DonMonitor report: timer Window.lua:458 avg 58.6 ms every 2 s) where the player stands, the
+-- parts of the list and the distance of a hit, shared by the search and by ns.Resort (the open list following the player)
+local function Here()
+  local api = ns.Map()
+  local h = { api = api, secOf = {} }
+  if api then h.c, h.n, h.w = api.PlayerWorld() end
+  -- the player's map (a city has its own) and the zone around it, for the parts of the list
+  if h.c and api.PlayerPosition then
+    h.here = api.PlayerPosition()
+    h.zone = h.here and api.ZoneMap and api.ZoneMap(h.here) or h.here
+  end
+  return h
+end
+
+local function Sec(h, mapID)
+  local here, zone = h.here, h.zone
+  if not here then return nil end
+  local s = h.secOf[mapID]
+  if not s then
+    s = (mapID == here or mapID == zone) and 1 or (ns.Neighbours(h.api, zone or here, mapID) or ns.Neighbours(h.api, here, mapID)) and 2 or 3
+    h.secOf[mapID] = s
+  end
+  return s
+end
+
+-- the distance to the place at index i of an NPC's places; nil on another continent or without a position
+local function SpotDist(h, npc, i)
+  local w = h.c and World(npc, h.api)
+  if w and w[i] == h.c then
+    local dn, dw = w[i + 1] - h.n, w[i + 2] - h.w
+    return math.sqrt(dn * dn + dw * dw)
+  end
+  return nil
+end
+
+-- the nearest place of an NPC: its index in the places and the distance (the first place and nil when none is in reach)
+local function Nearest(h, npc, p)
+  local best, bestD = 1, nil
+  if h.c then
+    local w, pc, pn, pw = World(npc, h.api), h.c, h.n, h.w
+    for i = 1, #p, 3 do
+      if w[i] == pc then
+        local dn, dw = w[i + 1] - pn, w[i + 2] - pw
+        local d = math.sqrt(dn * dn + dw * dw)
+        if not bestD or d < bestD then best, bestD = i, d end
+      end
+    end
+  end
+  return best, bestD
+end
+
 function ns.Search(role, text)
   role = ns.Str(role)
   local raw = ns.Str(text) and text:gsub("^%s+", ""):gsub("%s+$", "") or ""
@@ -122,65 +173,78 @@ function ns.Search(role, text)
   local inGroup = group and ns.Sellers(group, "") or nil
   local byText = text ~= "" and ns.Sellers(group, text, raw) or nil
   local side, other = ns.PlayerSide(), ns.db and ns.db.otherSide
-  local api = ns.Map()
-  local pc, pn, pw
-  if api then pc, pn, pw = api.PlayerWorld() end
-  -- the player's map (a city has its own) and the zone around it, for the parts of the list
-  local here, zone
-  if pc and api.PlayerPosition then
-    here = api.PlayerPosition()
-    zone = here and api.ZoneMap and api.ZoneMap(here) or here
-  end
-  local secOf = {}
-  local function Sec(mapID)
-    if not here then return nil end
-    local s = secOf[mapID]
-    if not s then
-      s = (mapID == here or mapID == zone) and 1 or (ns.Neighbours(api, zone or here, mapID) or ns.Neighbours(api, here, mapID)) and 2 or 3
-      secOf[mapID] = s
-    end
-    return s
-  end
+  local h = Here()
+  local here = h.here
+  -- (22.11.2026) the role as it stands in npc.roles, made once (was a new string per NPC in ns.HasRole)
+  local roleKey = role and (" " .. role .. " ") or nil
   for _, npc in ipairs(ns.NPCs()) do
     if (other or not side or npc.side == "N" or npc.side == side)
-        and (not role or ns.HasRole(npc, role))
+        and (not roleKey or npc.roles:find(roleKey, 1, true))
         and (not inGroup or inGroup[npc.id])
         and (text == "" or npc.low:find(text, 1, true) or (byText and byText[npc.id])) then
       local sold = byText and byText[npc.id] or inGroup and inGroup[npc.id] or nil
       local p = ns.Places(npc)
-      local best, bestD = 1, nil
       if npc.place then
         -- (11.11.2026, Daniel: "da gibt es ja viele möglichkeiten") a place line holds every cooking fire of a zone:
         -- each fire is a hit of its own, so the list shows the second and third nearest as well
-        local w = pc and World(npc, api)
         for i = 1, #p, 3 do
-          local d
-          if w and w[i] == pc then
-            local dn, dw = w[i + 1] - pn, w[i + 2] - pw
-            d = math.sqrt(dn * dn + dw * dw)
-          end
+          local d = SpotDist(h, npc, i)
           out[#out + 1] = { npc = npc, role = asked, mapID = p[i], x = p[i + 1], y = p[i + 2], dist = d, spot = i,
-            sec = d and Sec(p[i]) or (here and 3 or nil) }
+            sec = d and Sec(h, p[i]) or (here and 3 or nil) }
         end
-        best = nil
-      elseif pc then
-        local w = World(npc, api)
-        for i = 1, #p, 3 do
-          if w[i] == pc then
-            local dn, dw = w[i + 1] - pn, w[i + 2] - pw
-            local d = math.sqrt(dn * dn + dw * dw)
-            if not bestD or d < bestD then best, bestD = i, d end
-          end
+      else
+        local best, bestD = Nearest(h, npc, p)
+        if p[best] then
+          out[#out + 1] = { npc = npc, role = asked, goods = sold, mapID = p[best], x = p[best + 1], y = p[best + 2], dist = bestD,
+            sec = bestD and Sec(h, p[best]) or (here and 3 or nil) }
         end
-      end
-      if best and p[best] then
-        out[#out + 1] = { npc = npc, role = asked, goods = sold, mapID = p[best], x = p[best + 1], y = p[best + 2], dist = bestD,
-          sec = bestD and Sec(p[best]) or (here and 3 or nil) }
       end
     end
   end
   table.sort(out, Before)
-  return out, (not pc) and "nopos" or nil
+  return out, (not h.c) and "nopos" or nil
+end
+
+-- (22.11.2026, Ruckler, DonMonitor report: timer Window.lua:458 avg 58.6 ms every 2 s: the whole search ran again
+-- whenever the player had moved) The hits of a search measured from where the player stands now and put in order
+-- again: no walk over all NPCs and goods, no new tables. The hits of a search do not depend on the position, only
+-- their distance, their part and, for an NPC with several places, which place is the nearest.
+--   list: results of ns.Search (changed in place). flat: no parts (the window's "other roles"). before: the order
+--   (default: the search's own).
+--   -> state ("nopos" or nil), changed: true when the order, a part, a hit's place or whether it has a distance
+--      changed (false: the rows only show other yards). A hit whose place changed loses .item (the window's row).
+function ns.Resort(list, flat, before)
+  before = before or Before
+  local h = Here()
+  local here = h.here
+  local changed = false
+  for n = 1, #list do
+    local r = list[n]
+    local npc = r.npc
+    local p = ns.Places(npc)
+    local i, d = r.spot, nil
+    if i then
+      d = SpotDist(h, npc, i)
+    else
+      i, d = Nearest(h, npc, p)
+      if p[i] ~= r.mapID or p[i + 1] ~= r.x or p[i + 2] ~= r.y then
+        r.mapID, r.x, r.y, r.item, changed = p[i], p[i + 1], p[i + 2], nil, true
+      end
+    end
+    local sec = nil
+    if not flat then sec = d and Sec(h, p[i]) or (here and 3 or nil) end
+    if sec ~= r.sec or (d == nil) ~= (r.dist == nil) then changed = true end
+    r.dist, r.sec = d, sec
+  end
+  -- mostly the order holds: sorted only when two neighbours stand the wrong way round
+  for n = 2, #list do
+    if before(list[n], list[n - 1]) then
+      table.sort(list, before)
+      changed = true
+      break
+    end
+  end
+  return (not h.c) and "nopos" or nil, changed
 end
 
 function ns.DistText(dist)

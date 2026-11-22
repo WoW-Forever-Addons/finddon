@@ -1,5 +1,11 @@
 # Changes
 
+## 0.6.4
+
+- **Smoother play:** with the window open the list no longer searches everything again every 2 seconds while you move. The hits keep their place and only get new distances; the list is drawn again only when the order changes.
+- **The list holds still under the mouse:** while the mouse is on the hits they are not reordered, so no row moves away under the cursor.
+- **Faster searches:** a search draws the list once instead of three times, and setting or clearing the arrow no longer rebuilds the whole window.
+
 ## 0.6.3
 
 - **Fix:** an error after login ("Data.lua:183: attempt to perform indexed assignment on upvalue 'npcById'") when the NPC data was looked up before the first search.
