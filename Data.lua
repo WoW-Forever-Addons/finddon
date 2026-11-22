@@ -179,8 +179,10 @@ end
 -- the NPC with this id, nil when the data does not know it
 function ns.NPCByID(id)
   if not npcById then
-    npcById = {}
-    for _, n in ipairs(ns.NPCs()) do npcById[n.id] = n end
+    -- read the data first: Parse() clears npcById (22.11.2026, error on the timer after login)
+    local list, t = ns.NPCs(), {}
+    for _, n in ipairs(list) do t[n.id] = n end
+    npcById = t
   end
   return npcById[id]
 end

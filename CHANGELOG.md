@@ -1,5 +1,9 @@
 # Changes
 
+## 0.6.3
+
+- **Fix:** an error after login ("Data.lua:183: attempt to perform indexed assignment on upvalue 'npcById'") when the NPC data was looked up before the first search.
+
 ## 0.6.2
 
 - **Data of 21 November:** NPC data refreshed with the recordings of more players.
