@@ -173,12 +173,14 @@ function ns.Search(role, text)
   local inGroup = group and ns.Sellers(group, "") or nil
   local byText = text ~= "" and ns.Sellers(group, text, raw) or nil
   local side, other = ns.PlayerSide(), ns.db and ns.db.otherSide
+  local events = ns.db and ns.db.eventNPCs -- (23.11.2026) NPCs of a world event only with the option
   local h = Here()
   local here = h.here
   -- (22.11.2026) the role as it stands in npc.roles, made once (was a new string per NPC in ns.HasRole)
   local roleKey = role and (" " .. role .. " ") or nil
   for _, npc in ipairs(ns.NPCs()) do
     if (other or not side or npc.side == "N" or npc.side == side)
+        and (events or not npc.event)
         and (not roleKey or npc.roles:find(roleKey, 1, true))
         and (not inGroup or inGroup[npc.id])
         and (text == "" or npc.low:find(text, 1, true) or (byText and byText[npc.id])) then
@@ -203,6 +205,62 @@ function ns.Search(role, text)
   end
   table.sort(out, Before)
   return out, (not h.c) and "nopos" or nil
+end
+
+-- (24.11.2026, Daniel: no role chosen and no text, the list was empty; chosen: an overview "Nearby") the nearest NPC
+-- of each of the given roles, in the order of the roles (the list does not jump while the player walks).
+--   ns.Nearby(codes, cands) -> results (like ns.Search, sec = nil, near = the role's code), state ("nopos" or nil), cands
+-- cands: the NPCs of each role, made by one walk over all NPCs and handed back; passed in again (the list following
+-- the player) only the NPCs of these roles are measured, no walk over all NPCs. They hold for the same roles, side,
+-- options and data (cands.sig); else they are made anew. A role without any NPC is left out.
+local function NearbySig(codes)
+  return table.concat(codes, ",") .. "|" .. tostring(ns.PlayerSide()) .. "|" .. tostring(ns.db and ns.db.otherSide)
+    .. "|" .. tostring(ns.db and ns.db.eventNPCs) .. "|" .. tostring(ns.NPCs())
+end
+
+local function NearbyCands(codes, sig)
+  local cands = { sig = sig }
+  local side, other = ns.PlayerSide(), ns.db and ns.db.otherSide
+  local events = ns.db and ns.db.eventNPCs
+  local keys, groups = {}, {}
+  for i, code in ipairs(codes) do
+    cands[code] = {}
+    local r = ns.Role(code)
+    if r and r.goods then groups[i] = ns.Sellers(r.goods, "") or {} else keys[i] = " " .. code .. " " end
+  end
+  for _, npc in ipairs(ns.NPCs()) do
+    if (other or not side or npc.side == "N" or npc.side == side) and (events or not npc.event) then
+      for i, code in ipairs(codes) do
+        local key = keys[i]
+        if (key and npc.roles:find(key, 1, true)) or (groups[i] and groups[i][npc.id]) then
+          local list = cands[code]
+          list[#list + 1] = npc
+        end
+      end
+    end
+  end
+  return cands
+end
+
+function ns.Nearby(codes, cands)
+  local sig = NearbySig(codes)
+  if not (cands and cands.sig == sig) then cands = NearbyCands(codes, sig) end
+  local h = Here()
+  local out = {}
+  for _, code in ipairs(codes) do
+    local best, bestI, bestD = nil, nil, nil
+    for _, npc in ipairs(cands[code]) do
+      local p = ns.Places(npc)
+      local i, d = Nearest(h, npc, p)
+      if p[i] and (not best or (d and (not bestD or d < bestD))) then best, bestI, bestD = npc, i, d end
+    end
+    if best then
+      local p = ns.Places(best)
+      out[#out + 1] = { npc = best, role = code, near = code, mapID = p[bestI], x = p[bestI + 1], y = p[bestI + 2], dist = bestD,
+        spot = best.place and bestI or nil }
+    end
+  end
+  return out, (not h.c) and "nopos" or nil, cands
 end
 
 -- (22.11.2026, Ruckler, DonMonitor report: timer Window.lua:458 avg 58.6 ms every 2 s: the whole search ran again

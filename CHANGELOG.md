@@ -1,5 +1,21 @@
 # Changes
 
+## 0.7.0
+
+- **What a vendor sells, with prices:** click a vendor in the list and a narrow window opens beside the search window with everything it sells: the game's icon, the name in its quality colour and the price. Click another vendor and it shows that one's goods; an NPC without goods closes it.
+- **Limited supply marked:** goods a vendor does not always have in stock say so.
+- **Already known and not usable:** a recipe your character knows, or an item it cannot use, has a red icon as at the vendor, and "Already known" under its name.
+- **The game's own tooltip** on every item; Shift-click links it in chat, Ctrl-click tries it on.
+- **Event NPCs hidden:** NPCs that are only there during a world event (Feast of Winter Veil, Hallow's End, Lunar Festival, Darkmoon Faire and others) no longer show up all year. The new option "Show event NPCs" lists them again, with the event's name in the row.
+- Prices are the base prices without reputation discount; once you have opened a vendor's window, Finddon shows the prices seen there.
+- **Nearby overview:** with no role and no search text picked, the list shows the nearest NPC of each of your favourite roles; without favourites it shows the nearest inn, bank, flight master, repair vendor and mailbox.
+- **Goods of the new Forever vendors:** vendors added by Forever now list what they sell, so the goods window is no longer nearly empty in the new zones such as Riverglades.
+- **Learning at vendors fixed:** Finddon learns what a vendor sells again when the vendor window is filtered to your class; it adds the filtered part to its list, and "All" gives the whole list.
+- **Smoother login:** NPCs and goods are read in small steps after login instead of in one go.
+- **Data of 24 November:** NPC and goods data refreshed.
+- **Tabs and list headers in the game's look:** group headers in lists are the game's own bars, with plus and minus on the right.
+- **Options open in their own window:** the options button, the cog, the minimap button and `/fd options` open only Finddon's own options window. Tooltips of wide rows now sit beside the mouse and no longer cover the search box.
+
 ## 0.6.4
 
 - **Smoother play:** with the window open the list no longer searches everything again every 2 seconds while you move. The hits keep their place and only get new distances; the list is drawn again only when the order changes.

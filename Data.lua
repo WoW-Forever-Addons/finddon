@@ -136,12 +136,47 @@ end
 ---------------------------------------------------------------------------
 local npcs, npcById
 
-local function Parse()
-  npcs, npcById = {}, nil
+-- (24.11.2026, Ruckler, DonMonitor Laptop at login: `timer Learn.lua:170` 42 ms for the NPCs, `timer Learn.lua:178`
+-- 30.3 ms for the goods) the data strings read ahead of use go in steps of STEP_MS, the rest in the next frame; any real
+-- use (a search, a vendor) finishes the reading at once. Without the game's clock (the tests) a step reads all.
+ns.STEP_MS = 5
+local function StepClock() local f = rawget(_G, "debugprofilestop") return type(f) == "function" and f or nil end
+-- fn(line) for every non-empty line of data from pos on; returns the position to go on from when the step's time
+-- (budget ms) was used up, nil at the end
+local function Lines(data, pos, fn, budget)
+  local clock = budget and StepClock()
+  local t0 = clock and clock()
+  local n = 0
+  local len = #data
+  while pos <= len do
+    local e = data:find("\n", pos, true)
+    local stop = (e or len + 1) - 1
+    if stop >= pos then fn(data:sub(pos, stop)) end
+    pos = stop + 2
+    n = n + 1
+    if clock and n % 16 == 0 and pos <= len and clock() - t0 >= budget then return pos end
+  end
+  return nil
+end
+
+local npcPos -- (24.11.2026) where the reading of the NPC string stands; nil when not reading
+local ParseLine
+-- the NPCs; budget: ms for this step (ahead), the rest in the next call. true when all are read
+local function Parse(budget)
+  if not npcPos then npcs, npcById, npcPos = {}, nil, 1 end
   local data = ns.NPC_DATA
-  if type(data) ~= "string" then return end
-  for line in data:gmatch("[^\n]+") do
-    local id, name, title, side, rl, level, spots, display, train = line:match("^(%d+)%^([^%^]*)%^([^%^]*)%^(%a)%^([^%^]*)%^([^%^]*)%^([^%^]+)%^?(%d*)%^?([^%^]*)$")
+  if type(data) == "string" then
+    local nxt = Lines(data, npcPos, ParseLine, budget)
+    if nxt then npcPos = nxt return false end
+    ns.NPC_DATA = nil -- the table replaces the string
+  end
+  npcPos = nil
+  return true
+end
+function ParseLine(line)
+  do
+    -- the tenth field (23.11.2026): the world event the NPC is only there for (a letter, EVENT_NAMES)
+    local id, name, title, side, rl, level, spots, display, train, event = line:match("^(%d+)%^([^%^]*)%^([^%^]*)%^(%a)%^([^%^]*)%^([^%^]*)%^([^%^]+)%^?(%d*)%^?([^%^]*)%^?(%l?)$")
     if id then
       -- roles as " v r C1 Pa ": a plain find of " a " cannot hit the a of Pa
       local padded = " " .. rl:gsub("([CP]?[%l%d])", "%1 ")
@@ -165,14 +200,24 @@ local function Parse()
       end
       npcs[#npcs + 1] = { id = id, place = place or nil, name = name, title = title, side = side, roles = padded, first = rl:match("[CP]?[%l%d]"),
         level = level ~= "" and level or nil, spots = spots, display = tonumber(display),
-        train = train ~= "" and train or nil, low = low:lower() }
+        train = train ~= "" and train or nil, event = event ~= "" and event or nil, low = low:lower() }
     end
   end
-  ns.NPC_DATA = nil -- the table replaces the string
+end
+
+-- (23.11.2026, Daniel with the Smokywood Pastures vendors in Ironforge in November: "die werden ja nur da sein, wenn
+-- event ist oder?", chosen: hidden, an option shows them) the world events an NPC may be bound to (tools/open/event_npcs.py)
+local EVENT_NAMES = { w = "Feast of Winter Veil", h = "Hallow's End", l = "Lunar Festival", d = "Darkmoon Faire",
+  m = "Midsummer Fire Festival", v = "Love is in the Air", n = "Noblegarden", c = "Children's Week", t = "Harvest Festival",
+  f = "Fireworks", s = "Stranglethorn Fishing Extravaganza", a = "Ahn'Qiraj War Effort", p = "Call to Arms" }
+-- the event's name in the game's language, nil for an NPC that is always there
+function ns.EventName(npc)
+  local name = npc and npc.event and EVENT_NAMES[npc.event]
+  return name and L[name] or nil
 end
 
 function ns.NPCs()
-  if not npcs then Parse() end
+  if not npcs or npcPos then Parse() end
   return npcs
 end
 
@@ -188,7 +233,7 @@ function ns.NPCByID(id)
 end
 
 -- (tests) another data string: read at the next search
-function ns.SetNPCData(data) ns.NPC_DATA, npcs, npcById = data, nil, nil end
+function ns.SetNPCData(data) ns.NPC_DATA, npcs, npcById, npcPos = data, nil, nil, nil end
 
 function ns.HasRole(npc, code) return npc.roles:find(" " .. code .. " ", 1, true) ~= nil end
 
@@ -214,12 +259,13 @@ end
 
 ---------------------------------------------------------------------------
 -- Goods (11.11.2026): what the vendors sell. Data\Goods.lua is one long string, a line per item:
---   item^name^group^vendors^vendors with limited supply   (vendors: NPC ids, four base 36 digits each)
+--   item^name^group^vendors^vendors with limited supply^price^stack   (vendors: NPC ids, four base 36 digits each;
+--   price: copper for one purchase of `stack` pieces, empty = no price in money known; 23.11.2026)
 -- Read at the first search that asks for goods; the vendor lists stay strings and are walked when an item matches.
 -- The names in the data are English. In another language the game's own names are asked for bit by bit once the goods
 -- are in use (GetItemInfo; a name the game does not give yet stays English) and searched as well.
 ---------------------------------------------------------------------------
-local goods, goodById
+local goods, goodById, byVendor
 local NAMES_BATCH, NAMES_STEP, NAMES_AGAIN = 25, 0.4, 5
 local MIN_GOODS_TEXT = 2 -- letters before the search box looks into the goods
 
@@ -261,39 +307,61 @@ local function LoadNames()
 end
 
 local namesLater -- (21.11.2026, Ruckler) parsed ahead after login: the names start on the first real use, as before
-local function ParseGoods(ahead)
-  goods, goodById = {}, {}
-  local data = ns.GOODS_DATA
-  if type(data) == "string" then
-    for line in data:gmatch("[^\n]+") do
-      local id, name, group, free, limited = line:match("^(%d+)%^([^%^]+)%^(%l?)%^(%w*)%^(%w*)$")
-      if id then
-        goods[#goods + 1] = { id = tonumber(id), name = name, low = name:lower(), group = group ~= "" and group or nil,
-          free = free, limited = limited }
-        goodById[goods[#goods].id] = goods[#goods]
-      end
+local goodsPos -- (24.11.2026) where the reading of the goods string stands ("sort": read, not sorted); nil when not reading
+local function GoodLine(line)
+  -- price and stack (23.11.2026) may be missing: a line of the older format still reads
+  local id, name, group, free, limited, price, stack = line:match("^(%d+)%^([^%^]+)%^(%l?)%^(%w*)%^(%w*)%^?(%d*)%^?(%d*)$")
+  if id then
+    goods[#goods + 1] = { id = tonumber(id), name = name, low = name:lower(), group = group ~= "" and group or nil,
+      free = free, limited = limited, price = tonumber(price), stack = tonumber(stack) }
+    goodById[goods[#goods].id] = goods[#goods]
+  end
+end
+-- the goods; budget (ahead): ms for this step, the rest (and the sort, a step of its own) in the next call. true when done
+local function ParseGoods(ahead, budget)
+  if not goodsPos then goods, goodById, goodsPos = {}, {}, 1 end
+  if goodsPos ~= "sort" then
+    local data = ns.GOODS_DATA
+    if type(data) == "string" then
+      local nxt = Lines(data, goodsPos, GoodLine, budget)
+      if nxt then goodsPos = nxt return false end
+      ns.GOODS_DATA = nil
     end
-    ns.GOODS_DATA = nil
+    goodsPos = "sort"
+    if budget and StepClock() then return false end
   end
   table.sort(goods, function(a, b) if a.name ~= b.name then return a.name < b.name end return a.id < b.id end)
-  if ahead then namesLater = true return end
+  goodsPos = nil
+  if ahead then namesLater = true return true end
   namesLater = nil
   LoadNames()
+  return true
 end
 
 function ns.Goods()
-  if not goods then ParseGoods()
+  if not goods or goodsPos then ParseGoods()
   elseif namesLater then namesLater = nil LoadNames() end
   return goods
 end
 
 -- (21.11.2026, Ruckler) the goods (129 KB) and the NPCs (205 KB) were parsed at the first vendor of a session (a hitch
 -- there): Learn.lua parses them ahead a few seconds after login, out of combat, one per call
-function ns.ParseGoodsAhead() if not goods then ParseGoods(true) end end
-function ns.ParseNPCsAhead() ns.NPCByID(0) end
+-- (24.11.2026) one step each call; true when done (Learn.lua calls again in the next frame until then)
+function ns.ParseGoodsAhead()
+  if goods and not goodsPos then return true end
+  return ParseGoods(true, ns.STEP_MS)
+end
+function ns.ParseNPCsAhead()
+  if npcs and not npcPos then
+    if not npcById then ns.NPCByID(0) end -- the map by id: a step of its own
+    return true
+  end
+  Parse(ns.STEP_MS)
+  return false
+end
 
 -- (tests) another goods string: read at the next search
-function ns.SetGoodsData(data) ns.GOODS_DATA, goods, goodById, namesLater = data, nil, nil, nil end
+function ns.SetGoodsData(data) ns.GOODS_DATA, goods, goodById, namesLater, byVendor, goodsPos = data, nil, nil, nil, nil, nil end
 
 -- whether the shipped data knows the item
 function ns.KnownGood(id)
@@ -333,7 +401,9 @@ function ns.Sellers(group, text, raw)
   local function Take(it, list, limited)
     for i = 1, #list - 3, 4 do
       local id = tonumber(list:sub(i, i + 3), 36)
-      if id and not (learned and learned[id]) then
+      -- (23.11.2026) a vendor read in full (not partial) counts with that list only
+      local rec = learned and learned[id]
+      if id and not (type(rec) == "table" and not rec.partial) then
         local t = out[id]
         if not t then t = {} out[id] = t end
         t[#t + 1] = it
@@ -366,6 +436,19 @@ function ns.Sellers(group, text, raw)
           end
         end
         if list then
+          -- (23.11.2026) a part of the list (read with the class filter on) adds to the shipped one
+          local base = rec.partial and out[npc]
+          if base then
+            local have = {}
+            for _, it in ipairs(base) do have[it] = true end
+            for _, it in ipairs(list) do
+              if not have[it] then
+                base[#base + 1] = it
+                if list.limited and list.limited[it] then base.limited = base.limited or {} base.limited[it] = true end
+              end
+            end
+            list = base
+          end
           table.sort(list, function(a, b) if a.name ~= b.name then return a.name < b.name end return a.id < b.id end)
           out[npc] = list
         end
@@ -373,6 +456,80 @@ function ns.Sellers(group, text, raw)
     end
   end
   return out
+end
+
+-- (23.11.2026, Daniel: "bei den npcs die waren anbieten nach einem linksklick rechts daneben ein fenster aufgehen
+-- lassen, welche waren sie zu welchem preis anbieten. beschränkte waren dementsprechend kennzeichnen")
+-- Everything one vendor sells, in the order of the names: { item, ..., limited = { [item] = true },
+-- prices = { [item id] = copper }, stacks = { [item id] = n } (both only from a window seen in the game),
+-- seen = true (the list was read at the vendor) }; nil when the NPC sells nothing we know.
+-- The shipped lists are turned round once (vendor -> items) at the first call.
+local function ByName(a, b) if a.name ~= b.name then return a.name < b.name end return a.id < b.id end
+function ns.GoodsOf(npc)
+  npc = tonumber(npc)
+  if not npc then return nil end
+  local rec = ns.db and type(ns.db.goods) == "table" and ns.db.goods[npc] or nil
+  if type(rec) == "table" and type(rec.items) == "table" and rec.items[1] then
+    ns.Goods()
+    local list = { limited = {}, seen = true,
+      prices = type(rec.prices) == "table" and rec.prices or nil, stacks = type(rec.stacks) == "table" and rec.stacks or nil }
+    local have = {}
+    for _, id in ipairs(rec.items) do
+      local it = LearnedGood(id, rec)
+      if it and not have[it] then
+        have[it] = true
+        list[#list + 1] = it
+        if type(rec.limited) == "table" and rec.limited[id] then list.limited[it] = true end
+      end
+    end
+    -- (23.11.2026) a part of the list (read with the class filter on): the shipped goods of this vendor too
+    if rec.partial then
+      local shipped = ns.ShippedGoodsOf(npc)
+      for _, it in ipairs(shipped or {}) do
+        if not have[it] then
+          have[it] = true
+          list[#list + 1] = it
+          if shipped.limited[it] then list.limited[it] = true end
+        end
+      end
+    end
+    table.sort(list, ByName)
+    return list[1] and list or nil
+  end
+  return ns.ShippedGoodsOf(npc)
+end
+-- what the shipped data says one vendor sells (no list read in the game)
+function ns.ShippedGoodsOf(npc)
+  if not byVendor then
+    byVendor = {}
+    local function Take(it, s, limited)
+      for i = 1, #s - 3, 4 do
+        local id = tonumber(s:sub(i, i + 3), 36)
+        if id then
+          local t = byVendor[id]
+          if not t then t = { limited = {} } byVendor[id] = t end
+          t[#t + 1] = it
+          if limited then t.limited[it] = true end
+        end
+      end
+    end
+    for _, it in ipairs(ns.Goods()) do -- sorted by name already
+      Take(it, it.free, false)
+      Take(it, it.limited, true)
+    end
+  end
+  return byVendor[npc]
+end
+
+-- the price of one purchase at this vendor and how many pieces it gives: as seen in the game, else the shipped one;
+-- nil = no price in money known
+function ns.GoodPrice(it, list)
+  local price = list and list.prices and tonumber(list.prices[it.id]) or nil
+  local stack = list and list.stacks and tonumber(list.stacks[it.id]) or nil
+  if price then return price, stack or 1 end
+  -- a window seen in the game without a price for the item: it costs another currency there
+  if list and list.prices then return nil, stack or it.stack or 1 end
+  return it.price, it.stack or 1
 end
 
 -- What a hit's row says it sells: the first item and how many more ("Coarse Thread +3")

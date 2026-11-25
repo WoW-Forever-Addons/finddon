@@ -14,7 +14,7 @@ local Kit = Core:Get("Kit", 22) or Core:Get("Kit", 10) or Core:Get("Kit", 1)
 local UI = Kit
 local lookNote = nil -- "blizzard" or "kit", with the reason when the option is on (diag, ns.WindowLook)
 local W
-local state = { role = nil, text = "", results = {}, others = {}, note = nil, at = nil }
+local state = { role = nil, text = "", results = {}, others = {}, note = nil, at = nil, nearby = false, cands = nil }
 -- (11.11.2026, proposals 8 and 5) the role column 204 wide (was 190: long names and the favourite's star were tight)
 local ROLE_W, ROLE_W_NARROW, NARROW, SEARCH_H, GAP = 204, 160, 540, 28, 6
 local WIN_W, WIN_H = 660, 520
@@ -30,6 +30,22 @@ local EXTRA, EXTRA_MAX = 14, 4 -- the small symbols of an NPC's other roles behi
 local STAR = "|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_1:12:12|t" -- a favourite role
 local SOLD_MAX = 8 -- goods a hit's tooltip lists
 local SECTIONS = { "In this zone", "Neighbouring zones", "Further away" }
+-- (24.11.2026, Daniel: the list was empty with no role and no text; chosen: an overview "Nearby") the nearest NPC of
+-- each favourite role; without favourites of these services
+local NEARBY_DEFAULT = { "i", "b", "t", "r", "l" } -- innkeeper, bank, flight master, repair, mailbox
+
+-- the roles the overview shows: the favourites in the order of the role list, else NEARBY_DEFAULT; true with favourites
+local function NearbyCodes()
+  local codes, favs = {}, ns.db.favs
+  if next(favs) then
+    for _, r in ipairs(ns.Roles()) do if favs[r.code] then codes[#codes + 1] = r.code end end
+  end
+  if not codes[1] then return NEARBY_DEFAULT, false end
+  return codes, true
+end
+
+-- nothing chosen and nothing typed: the overview
+local function Idle() return not state.role and not state.text:find("%S") end
 
 -- The large picture of the hit under the mouse. (11.11.2026, Daniel: "die 3d vorschau nur wenn ich noch mit der maus
 -- in der trefferleiste bin", "die stört wenn ich links was anderes suchen will") It lies over the lower part of the
@@ -189,12 +205,18 @@ local function ProfLetter(code)
   return code and code:match("^P(%l)$") or nil
 end
 
-local function Sub(npc, mapID, sold, code)
+local function Sub(npc, mapID, sold, code, near)
   -- a hit by its goods says what it sells in the place of its title; a profession NPC what it teaches (20.11.2026)
   local letter = ProfLetter(code)
   local what = sold and ns.GoodsText(sold) or letter and ns.TrainText(npc, letter)
     or npc.title ~= "" and npc.title or ns.RoleText(npc)
+  -- (24.11.2026) a hit of the overview "Nearby" names the role it stands for first
+  local role = near and ns.Role(near)
+  if role and not npc.place and role.label ~= what then what = what ~= "" and (role.label .. " · " .. what) or role.label end
   local zone = ns.ZoneName(mapID)
+  -- (23.11.2026) an NPC of a world event says so first
+  local event = ns.EventName(npc)
+  if event then what = what ~= "" and (event .. " · " .. what) or event end
   if what ~= "" and zone ~= "" then return what .. " · " .. zone end
   return what ~= "" and what or zone
 end
@@ -203,12 +225,17 @@ local function Tip(r, code)
   local npc = r.npc
   local lines = {}
   if npc.title ~= "" then lines[#lines + 1] = npc.title end
+  -- (24.11.2026) a hit of the overview: the nearest of which role
+  local near = r.near and ns.Role(r.near)
+  if near then lines[#lines + 1] = { L["Nearest"], near.label } end
   local rt = ns.RoleText(npc)
   if rt ~= "" then lines[#lines + 1] = { L["Role"], rt } end
   local letter = ProfLetter(code)
   local train = letter and ns.TrainText(npc, letter)
   if train then lines[#lines + 1] = { L["Teaches"], train } end
   if npc.level then lines[#lines + 1] = { L["Level"], (npc.level:gsub("%+", " " .. L["Elite"])) } end
+  local event = ns.EventName(npc)
+  if event then lines[#lines + 1] = { L["Only during"], event } end
   if r.goods then
     for i = 1, math.min(#r.goods, SOLD_MAX) do
       local it = r.goods[i]
@@ -224,6 +251,8 @@ local function Tip(r, code)
   local n = #ns.Places(npc) / 3
   if n > 1 and not npc.place then lines[#lines + 1] = L["%d known places, the nearest is shown."]:format(n) end
   if npc.side ~= "N" and npc.side ~= ns.PlayerSide() then lines[#lines + 1] = L["Other faction"] end
+  -- (23.11.2026) a vendor's click opens its goods as well
+  if not npc.place and ns.GoodsOf(npc.id) then return npc.name, lines, L["Click: arrow, pin and goods. Right click: drop them."] end
   return npc.name, lines, L["Click: arrow and pin. Right click: drop them."]
 end
 
@@ -235,7 +264,7 @@ local LAZY = { __index = function(it, k)
   local r, code = rawget(it, "result"), rawget(it, "code")
   if not r then return nil end
   local npc, v = r.npc, nil
-  if k == "sub" then v = Sub(npc, r.mapID, r.goods, code)
+  if k == "sub" then v = Sub(npc, r.mapID, r.goods, code, r.near)
   elseif k == "extra" then v = not npc.place and ns.OtherRoles(npc, code) or false
   elseif k == "tooltipFn" then v = function() return Tip(r, code) end
   else v = function(_, on) if on then ns.Preview(npc, r) else PreviewLeave() end end end
@@ -256,8 +285,10 @@ local function ResultItems(keep)
       local npc = r.npc
       local it = keep and r.item or nil
       if not it then
-        local role = not own and chosen or ns.Role(npc.first)
-        it = setmetatable({ kind = "npc", key = r.spot and (npc.id .. ":" .. r.spot) or npc.id, result = r, icon = role and role.icon or nil,
+        local role = r.near and ns.Role(r.near) or not own and chosen or ns.Role(npc.first)
+        -- a hit of the overview keyed by its role: one NPC may be the nearest of two roles (a vendor who repairs)
+        local key = r.near and ("near:" .. r.near) or r.spot and (npc.id .. ":" .. r.spot) or npc.id
+        it = setmetatable({ kind = "npc", key = key, result = r, icon = role and role.icon or nil,
           title = npc.level and ("%s  |cff9ea3ad%s|r"):format(npc.name, npc.level) or npc.name,
           code = role and role.code or nil, rightWidth = MAP_X + MAP_W - 12 }, LAZY)
         it.right, it.rightColor = Right(r)
@@ -265,6 +296,15 @@ local function ResultItems(keep)
       end
       it.active = target ~= nil and target.npc == npc and (not r.spot or (target.x == r.x and target.y == r.y))
       items[#items + 1] = it
+  end
+  -- (24.11.2026) the overview: one head "Nearby" over the nearest of each role, in the order of the roles
+  if state.nearby and state.results[1] then
+    items[#items + 1] = { kind = "group", sec = "near", text = L["Nearby"], count = #state.results,
+      collapsed = ns.db.closedHits.near and true or false }
+    if not ns.db.closedHits.near then
+      for _, r in ipairs(state.results) do Row(r) end
+    end
+    return items
   end
   for _, r in ipairs(state.results) do
     if r.sec and r.sec ~= sec then
@@ -291,7 +331,12 @@ local function Status()
   if not W then return end
   local n, more = #state.results, #state.others
   local text
-  if not state.role and state.text == "" then
+  if state.nearby then
+    -- (24.11.2026) the overview: what it shows and how to choose that
+    local _, favs = NearbyCodes()
+    text = favs and L["Nearby: the nearest of your favourite roles."] or L["Nearby: right-click roles to choose what it shows."]
+    if state.note == "nopos" and n > 0 then text = text .. " · " .. L["No position here: sorted by zone."] end
+  elseif not state.role and state.text == "" then
     text = L["Choose a role or type a name or goods."]
   elseif n == 0 and more == 0 then
     text = L["Nothing found."]
@@ -317,7 +362,7 @@ local function Draw(reset, keep)
   if not keep then
     W.roles:SetItems(RoleItems())
     -- (22.11.2026) SetEmpty draws the list: only when the text changes (the hits were drawn twice with every search)
-    local empty = (state.role or state.text ~= "") and L["Nothing found."] or L["Choose a role or type a name or goods."]
+    local empty = state.nearby and L["Choose a role or type a name or goods."] or L["Nothing found."]
     if W.list.emptyText ~= empty then W.list:SetEmpty(empty) end
   end
   W.list:SetItems(ResultItems(keep), reset)
@@ -342,8 +387,16 @@ local function OtherBefore(a, b)
   return (a.spot or 0) < (b.spot or 0)
 end
 
-local function Run(reset)
-  state.results, state.note = ns.Search(state.role, state.text)
+local function Run(reset, keepCands)
+  -- (24.11.2026) nothing chosen and nothing typed: the overview "Nearby"; a search makes its NPCs anew (options, data,
+  -- learned goods), the list following the player and the goods' names arriving (keepCands) keep them
+  state.nearby = Idle()
+  if state.nearby then
+    state.results, state.note, state.cands = ns.Nearby((NearbyCodes()), keepCands and state.cands or nil)
+  else
+    state.results, state.note = ns.Search(state.role, state.text)
+    state.cands = nil
+  end
   -- the hits of the text outside the chosen role (see ResultItems)
   state.others = {}
   if state.role and state.text:find("%S") then
@@ -367,7 +420,7 @@ end
 ns.RunSearch = function() Run(true) end
 -- the same search again without going back to the top (the goods' names in the game's language arrived, Data.lua)
 function ns.SearchAgain()
-  if W and W:IsShown() then Run() end
+  if W and W:IsShown() then Run(nil, true) end
 end
 
 function ns.RefreshWindow()
@@ -392,9 +445,35 @@ end
 -- on a mount the whole search, every item and both lists ran again every 2 s) The player moved, the search is the
 -- same: the kept hits get their distance from here and are put in order (ns.Resort). The order, the parts and the
 -- places held: the rows on screen get their new yards, nothing is drawn. Else the hits are drawn with their items kept.
+-- (24.11.2026) The overview "Nearby": the nearest of each role measured again among the kept NPCs of its roles
+-- (state.cands, no walk over all NPCs). The same NPCs at the same places keep their hits and items, only the yards change.
+local function FollowNearby()
+  local fresh, note, cands = ns.Nearby((NearbyCodes()), state.cands)
+  state.cands = cands
+  local old, same = state.results, #fresh == #state.results
+  for i = 1, same and #fresh or 0 do
+    local a, b = fresh[i], old[i]
+    if a.npc ~= b.npc or a.near ~= b.near or a.mapID ~= b.mapID or a.x ~= b.x or a.y ~= b.y or (a.dist == nil) ~= (b.dist == nil) then
+      same = false
+      break
+    end
+  end
+  if same then
+    for i = 1, #fresh do old[i].dist = fresh[i].dist end
+  else
+    state.results = fresh
+  end
+  return note, not same
+end
+
 local function Follow(c, n, w)
-  local note, changed = ns.Resort(state.results)
-  local _, more = ns.Resort(state.others, true, OtherBefore)
+  local note, changed, more
+  if state.nearby then
+    note, changed = FollowNearby()
+  else
+    note, changed = ns.Resort(state.results)
+    more = select(2, ns.Resort(state.others, true, OtherBefore))
+  end
   state.at = { c, n, w }
   if not (changed or more) and note == state.note then
     for _, row in ipairs(W.list:Rows()) do
@@ -424,7 +503,7 @@ local function Watch()
   local api = ns.Map()
   -- (22.11.2026) not while the mouse is on the hits: a row must not move away under the cursor; the list catches up
   -- at the first pass after the mouse left
-  if api and (state.role or state.text ~= "") and not (W.list.IsMouseOver and W.list:IsMouseOver()) then
+  if api and (state.role or state.text ~= "" or state.nearby) and not (W.list.IsMouseOver and W.list:IsMouseOver()) then
     local c, n, w = api.PlayerWorld()
     local at = state.at
     if c and (not at or at[1] ~= c or math.abs(at[2] - n) + math.abs(at[3] - w) > MOVED) then Follow(c, n, w) end
@@ -483,15 +562,19 @@ local function Build()
   local blizz = UI ~= Kit
   W = UI.Window(blizz and "FinddonPanelBlizz" or "FinddonPanel", { title = "Finddon", logo = "Interface\\AddOns\\Finddon\\Media\\minimap",
     options = "Finddon", hint = "/fd options", footer = true, store = ns.db.win,
+    onClose = function() if ns.HideGoods then ns.HideGoods() end end,
     width = blizz and BZ_W or WIN_W, height = blizz and BZ_H or WIN_H,
     min = blizz and { 460, 340 } or { 420, 300 }, max = { 1000, 900 },
     onLayout = function(win, w, h) Place(win, w, h) end })
   W:Hide()
+  -- (23.11.2026) the goods window goes with the search window (Blizzard's window says so through onClose)
+  if not blizz then W:SetScript("OnHide", function() if ns.HideGoods then ns.HideGoods() end end) end
   W.roles = UI.List(W.body, { onClick = function(it, button)
     if not it.key then return end
     if button == "RightButton" then
       ns.db.favs[it.key] = not ns.db.favs[it.key] or nil
-      Draw()
+      -- (24.11.2026) the overview shows the favourites: it is made anew
+      if state.nearby then Run() else Draw() end
       return
     end
     state.role = state.role ~= it.key and it.key or nil
@@ -547,7 +630,10 @@ local function Build()
       ns.ClearTarget()
     else
       ns.SetTarget(it.result)
-      if ns.db.closeOnPick then W:Hide() end
+      -- (23.11.2026, Daniel: "nach einem linksklick rechts daneben ein fenster aufgehen lassen, welche waren sie zu
+      -- welchem preis anbieten") a vendor's goods beside the window; the window then stays open
+      local goods = ns.ShowGoods and ns.ShowGoods(it.result, W, UI)
+      if ns.db.closeOnPick and not goods then W:Hide() end
     end
   end })
   W:SetScript("OnShow", function()
@@ -635,6 +721,7 @@ function ns.WindowShown() return W ~= nil and W:IsShown() and true or false end
 function ns.WindowLook() return lookNote end
 -- the option blizzLook changed: the window is built again in the other look the next time it opens (it was open: now)
 function ns.WindowReset()
+  if ns.ResetGoods then ns.ResetGoods() end
   if not W then return end
   local open = W:IsShown()
   W:Hide()

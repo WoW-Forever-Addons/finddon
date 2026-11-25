@@ -18,6 +18,7 @@ ns.defaults = {
   minimapButton = true,
   minimapAngle = 255,  -- between the other Don buttons (Dropdon 225)
   otherSide = false,   -- also list NPCs of the other faction
+  eventNPCs = false,   -- also list NPCs that are only there during a world event (23.11.2026)
   clearOnArrival = true, -- drop arrow and pin a moment after you arrive
   closeOnPick = false, -- close the window when a result is clicked
   pictures = true,     -- the NPC's 3D model in the rows (Picture.lua)
@@ -262,8 +263,9 @@ function ns.DiagLines()
     tostring(ns.LearnedCount and ns.LearnedCount() or 0),
     tostring(type(DonMapAPI) == "table" and DonMapAPI.version or "no"), tostring(ns.Target and ns.Target() and ns.Target().name or "none"))
   -- (16.11.2026) the window's look and why
+  local Opt = LibStub("DonCore-1.0"):Get("Options", 8)
   lines[#lines + 1] = ("window style: %s, built as %s, options %s"):format(ns.db and ns.db.blizzLook and "Blizzard look" or "Don look",
-    tostring(ns.WindowLook and ns.WindowLook() or "not built yet"), tostring(ns.OptionsLook and ns.OptionsLook() or "?"))
+    tostring(ns.WindowLook and ns.WindowLook() or "not built yet"), tostring(Opt and Opt.Look and tostring((Opt.Look())) or "?"))
   for _, e in ipairs(errors) do lines[#lines + 1] = ("%dx [%s] %s"):format(e.count, e.context, e.msg) end
   if #errors == 0 then lines[#lines + 1] = L["No errors."] end
   return lines

@@ -26,6 +26,7 @@ local PAGES = {
     -- "Blizzard look" from DonCore (Settings minor 6, ns.LookOption: name, entries and tooltip in the game's language)
     ns.LookOption({ addon = "Finddon", onChange = function() if ns.WindowReset then ns.WindowReset() end end }),
     { key = "otherSide", name = "Show the other faction", tip = "Also lists NPCs that only serve the other faction.", onChange = Rerun },
+    { key = "eventNPCs", name = "Show event NPCs", tip = "Also lists NPCs that are only there during a world event, such as the Feast of Winter Veil or the Darkmoon Faire.", onChange = Rerun },
     ns.MinimapOption(),
     { kind = "button", name = "Drop arrow and pin", button = "Drop", tip = "Takes Finddon's target off the arrow and the maps. /fd clear",
       onClick = function() ns.ClearTarget() end },
@@ -57,28 +58,11 @@ local function Help()
   return table.concat(lines, "\n")
 end
 
-local fullPages = false
 local function Build()
-  local spec = { name = "Finddon", status = Status, tools = TOOLS, pages = PAGES, help = Help,
-    -- (16.11.2026, DonCore Options 6) with the Blizzard look (option blizzLook, "Window style") every cog and /fd options ends in the game's settings
-    redirect = function() return ns.OpenGameOptions and ns.OpenGameOptions() or false end }
-  -- (16.11.2026, DonCore Settings 3) the game's look: the full pages in the game's settings although DonCore's window
-  -- is there (only where the client has the templates: without them the window is Don's and so is the options window)
-  if ns.db and ns.db.blizzLook and select(2, ns.LookKit()) then spec.fullPages, fullPages = true, true end
-  category = ns.BuildSettings(spec)
+  category = ns.BuildSettings({ name = "Finddon", status = Status, tools = TOOLS, pages = PAGES, help = Help })
 end
-
--- true when the game's settings were opened at Finddon (option blizzLook, pages built in full at login, not in combat)
-function ns.OpenGameOptions()
-  if not (ns.db and ns.db.blizzLook and fullPages and category and Settings and Settings.OpenToCategory) then return false end
-  if InCombatLockdown and InCombatLockdown() then ns.Print(L["Options cannot be opened in combat."]) return true end
-  Settings.OpenToCategory(category:GetID())
-  return true
-end
-function ns.OptionsLook() return fullPages and "game settings" or "don window" end
 
 function ns.OpenOptions()
-  if ns.OpenGameOptions() then return end -- (16.11.2026) the game's look: the game's settings
   if ns.OpenDonOptions and ns.OpenDonOptions() then return end
   if InCombatLockdown and InCombatLockdown() then
     ns.Print(L["Options cannot be opened in combat."])
